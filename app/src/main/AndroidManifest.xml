@@ -12,7 +12,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
         <activity
+            android:name=".SetAdminActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainMenuActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MyApplication" />
+        <activity
+            android:name=".StatisticsActivity"
             android:exported="false" />
         <activity
             android:name=".MainActivity"

@@ -7,4 +7,38 @@
     android:layout_height="match_parent"
     tools:context=".MainMenuActivity">
 
+    <Button
+        android:id="@+id/btnStartGame"
+        android:layout_width="400dp"
+        android:layout_height="150dp"
+        android:text="Start a game"
+        android:textSize="50sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/btnViewStats"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="@+id/btnViewStats"
+        app:layout_constraintTop_toBottomOf="@+id/btnViewStats"
+        app:layout_constraintVertical_bias="0.276" />
+
+    <Button
+        android:id="@+id/btnViewStats"
+        android:layout_width="400dp"
+        android:layout_height="150dp"
+        android:layout_marginTop="488dp"
+        android:text="View statistics"
+        android:textSize="50sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/btnSetAdmin"
+        android:text="Set an admin"
+        android:layout_width="400dp"
+        android:layout_height="150dp"
+        android:textSize="50sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/btnStartGame"
+        app:layout_constraintStart_toStartOf="@+id/btnStartGame"
+        app:layout_constraintTop_toBottomOf="@+id/btnStartGame" />
 </androidx.constraintlayout.widget.ConstraintLayout>
