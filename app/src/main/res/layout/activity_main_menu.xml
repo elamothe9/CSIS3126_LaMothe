@@ -24,10 +24,11 @@
         android:id="@+id/btnViewStats"
         android:layout_width="400dp"
         android:layout_height="150dp"
-        android:layout_marginTop="488dp"
+        android:layout_marginTop="304dp"
         android:text="View statistics"
         android:textSize="50sp"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

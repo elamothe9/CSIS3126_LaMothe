@@ -1,0 +1,81 @@
+CREATE DATABASE DesignProject;
+USE DesignProject;
+CREATE TABLE Team (
+    team_id VARCHAR(25) PRIMARY KEY
+);
+CREATE TABLE Account (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    is_admin BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE TABLE Player (
+    player_id INT AUTO_INCREMENT PRIMARY KEY,
+    team_id VARCHAR(50) NOT NULL,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    FOREIGN KEY (team_id) REFERENCES Team(team_id)
+);
+CREATE TABLE Game (
+    game_id INT AUTO_INCREMENT PRIMARY KEY,
+    home_team_id VARCHAR(25) NOT NULL,
+    away_team_id VARCHAR(25) NOT NULL,
+    final_home_score INT DEFAULT 0,
+    final_away_score INT DEFAULT 0,
+    FOREIGN KEY (home_team_id) REFERENCES Team(team_id),
+    FOREIGN KEY (away_team_id) REFERENCES Team(team_id)
+);
+CREATE TABLE Play (
+    play_id INT AUTO_INCREMENT PRIMARY KEY,
+    game_id INT NOT NULL,
+    
+    -- Current situation(before play unfolds)
+    inning INT NOT NULL,
+    half ENUM('TOP','BOTTOM') NOT NULL, -- clean inning data storage, instead of using a double
+	
+    home_score INT NOT NULL DEFAULT 0,
+    away_score INT NOT NULL DEFAULT 0,
+
+    pitcher_id INT NOT NULL,
+    batter_id INT NOT NULL,
+    first_base_runner_id INT,
+    second_base_runner_id INT,
+    third_base_runner_id INT,
+
+    balls INT NOT NULL DEFAULT 0,
+    strikes INT NOT NULL DEFAULT 0,
+    outs INT NOT NULL DEFAULT 0,
+
+	-- Result of play(does not record resulting situation)
+    single_hit BOOLEAN DEFAULT FALSE,
+    double_hit BOOLEAN DEFAULT FALSE, -- Has to be named double_hit instead of double because of variable attributes in sql :(  Other hits are named that way for consistency.
+    triple_hit BOOLEAN DEFAULT FALSE,
+    homerun BOOLEAN DEFAULT FALSE,
+    strikeout BOOLEAN DEFAULT FALSE,
+    walk BOOLEAN DEFAULT FALSE,
+    fielders_choice BOOLEAN DEFAULT FALSE,
+    batted_out BOOLEAN DEFAULT FALSE,
+    double_play BOOLEAN DEFAULT FALSE,
+    triple_play BOOLEAN DEFAULT FALSE,
+
+    FOREIGN KEY (game_id) REFERENCES Game(game_id),
+    FOREIGN KEY (pitcher_id) REFERENCES Player(player_id),
+    FOREIGN KEY (batter_id) REFERENCES Player(player_id),
+    FOREIGN KEY (first_base_runner_id) REFERENCES Player(player_id),
+    FOREIGN KEY (second_base_runner_id) REFERENCES Player(player_id),
+    FOREIGN KEY (third_base_runner_id) REFERENCES Player(player_id)
+
+);
+-- This tracks who scores on a given play, as it is easier than implementing it into the player table
+CREATE TABLE Play_Run (
+    play_id INT NOT NULL,
+    runner_id INT NOT NULL,
+    PRIMARY KEY (play_id, runner_id),
+    FOREIGN KEY (play_id) REFERENCES Play(play_id),
+    FOREIGN KEY (runner_id) REFERENCES Player(player_id)
+);
+
+
+
+
+
