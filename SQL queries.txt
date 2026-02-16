@@ -1,5 +1,6 @@
-CREATE DATABASE DesignProject;
+-- CREATE DATABASE DesignProject;
 USE DesignProject;
+/*
 CREATE TABLE Team (
     team_id VARCHAR(25) PRIMARY KEY
 );
@@ -28,11 +29,11 @@ CREATE TABLE Game (
 CREATE TABLE Play (
     play_id INT AUTO_INCREMENT PRIMARY KEY,
     game_id INT NOT NULL,
-    
+
     -- Current situation(before play unfolds)
     inning INT NOT NULL,
     half ENUM('TOP','BOTTOM') NOT NULL, -- clean inning data storage, instead of using a double
-	
+
     home_score INT NOT NULL DEFAULT 0,
     away_score INT NOT NULL DEFAULT 0,
 
@@ -74,6 +75,28 @@ CREATE TABLE Play_Run (
     FOREIGN KEY (play_id) REFERENCES Play(play_id),
     FOREIGN KEY (runner_id) REFERENCES Player(player_id)
 );
+
+
+-- Insert in all the players
+INSERT INTO Team (team_id) VALUES ('Phantoms'), ('Crimson Devils'), ('Outlaws'), ('Venom');
+INSERT INTO Player (team_id, first_name, last_name) VALUES ('Phantoms', 'Andrew', 'Chandler'),
+('Phantoms', 'Hector', 'Campbell'),
+('Phantoms', 'Anthony', 'Chandler'),
+('Phantoms', 'Jamie', 'Mills'),
+('Phantoms', 'Vaughn', 'Larkin'),
+('Crimson Devils', 'Tucker', 'Hall'),
+('Crimson Devils', 'Baxter', 'Lowell'),
+('Crimson Devils', 'Max', 'Fontana'),
+('Crimson Devils', 'Jacob', 'Kunin'),
+('Outlaws', 'Casey', 'Hockenbury'),
+('Outlaws', 'Tristan', 'Boutin'),
+('Outlaws', 'River', 'Koval'),
+('Outlaws', 'Eddie', 'Hockenbury'),
+('Venom', 'Robbie', 'Fragola'),
+('Venom', 'Graeham', 'Spitellie'),
+('Venom', 'Owen', 'Seremeth'),
+('Venom', 'Storm', 'Dusablon');
+*/
 
 
 

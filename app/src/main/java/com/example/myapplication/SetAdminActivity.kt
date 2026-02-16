@@ -11,7 +11,7 @@ import androidx.core.view.WindowInsetsCompat
 import android.util.Log
 
 class SetAdminActivity  : AppCompatActivity() {
-
+    private lateinit var btnBack: Button
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -21,5 +21,7 @@ class SetAdminActivity  : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+        this.btnBack = findViewById(R.id.btnBack)
+        this.btnBack.setOnClickListener { finish() }
     }
 }

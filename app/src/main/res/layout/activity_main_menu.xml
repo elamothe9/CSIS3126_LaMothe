@@ -18,13 +18,13 @@
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="@+id/btnViewStats"
         app:layout_constraintTop_toBottomOf="@+id/btnViewStats"
-        app:layout_constraintVertical_bias="0.276" />
+        app:layout_constraintVertical_bias="0.11" />
 
     <Button
         android:id="@+id/btnViewStats"
         android:layout_width="400dp"
         android:layout_height="150dp"
-        android:layout_marginTop="304dp"
+        android:layout_marginTop="132dp"
         android:text="View statistics"
         android:textSize="50sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -34,12 +34,27 @@
 
     <Button
         android:id="@+id/btnSetAdmin"
-        android:text="Set an admin"
         android:layout_width="400dp"
         android:layout_height="150dp"
+        android:text="Set an admin"
         android:textSize="50sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="@+id/btnStartGame"
+        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="@+id/btnStartGame"
-        app:layout_constraintTop_toBottomOf="@+id/btnStartGame" />
+        app:layout_constraintTop_toBottomOf="@+id/btnStartGame"
+        app:layout_constraintVertical_bias="0.15" />
+
+    <Button
+        android:id="@+id/btnLogout"
+        android:layout_width="400dp"
+        android:layout_height="150dp"
+        android:text="Logout"
+        android:textSize="50sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/btnSetAdmin"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="@+id/btnSetAdmin"
+        app:layout_constraintTop_toBottomOf="@+id/btnSetAdmin"
+        app:layout_constraintVertical_bias="0.254" />
 </androidx.constraintlayout.widget.ConstraintLayout>

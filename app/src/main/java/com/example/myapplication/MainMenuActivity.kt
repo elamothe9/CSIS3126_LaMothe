@@ -15,6 +15,8 @@ class MainMenuActivity : AppCompatActivity(){
     private lateinit var btnViewStats: Button
     private lateinit var btnStartGame: Button
     private lateinit var btnSetAdmin: Button
+    private lateinit var btnLogout: Button
+
     override fun onCreate(savedInstanceState: Bundle?){
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -28,6 +30,7 @@ class MainMenuActivity : AppCompatActivity(){
         this.btnSetAdmin = findViewById(R.id.btnSetAdmin)
         this.btnViewStats = findViewById(R.id.btnViewStats)
         this.btnStartGame = findViewById(R.id.btnStartGame)
+        this.btnLogout = findViewById(R.id.btnLogout)
         //On click listeners, sending user to different activities based on which one they press
         this.btnStartGame.setOnClickListener {
             val startGameIntent = Intent(this, GameActivity::class.java)
@@ -41,5 +44,6 @@ class MainMenuActivity : AppCompatActivity(){
             val setAdminIntent = Intent(this, SetAdminActivity::class.java)
             startActivity(setAdminIntent)
         }
+        this.btnLogout.setOnClickListener { finish() }
     }
 }
