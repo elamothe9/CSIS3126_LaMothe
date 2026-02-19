@@ -12,6 +12,8 @@ import android.util.Log
 import com.android.volley.toolbox.Volley
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.Request
+import com.android.volley.toolbox.StringRequest
+import org.json.JSONObject
 
 
 class MainActivity : AppCompatActivity() {
@@ -40,31 +42,76 @@ class MainActivity : AppCompatActivity() {
             Log.i("ButtonClicked", "btnSignInClicked")
             val email = editEmail.text.toString()
             val password = editPassword.text.toString()
-
+            val params = JSONObject()
+            params.put("email", email)
+            params.put("password", password)
+            val queue = Volley.newRequestQueue(this)
             //Handle sign in logic here, JSON Request once API is set up
+            val signin = JsonObjectRequest(
+                Request.Method.POST, "https://elamothe.jwuclasses.com/login ",
+                params,
+                { response ->
+                    Log.e("Signin data", response.toString())
+
+                    val success = response.getBoolean("success")
+
+                    if (success) {
+                        Log.i("Signin", "User logged in")
+
+                        val signInIntent = Intent(this, MainMenuActivity::class.java)
+                        signInIntent.putExtra("is_admin", response.getInt("is_admin"))
+                        startActivity(signInIntent)
+                    }
+                },
+                { error ->
+                    error.printStackTrace()
+                }
+            )
+            signin.setShouldCache(false)
+            queue.add(signin)
 
 
-            //Launch next activity upon successful sign in
-            //If(logged==successful)
-            val signInIntent = Intent(this, MainMenuActivity::class.java)
-            startActivity(signInIntent)
         }
-        val queue = Volley.newRequestQueue(this)
         //Same action as sign in, except creates a new account with default admin status = 0
         this.btnSignUp.setOnClickListener {
             Log.i("ButtonClicked", "btnSignUpClicked")
-            val testRequest = JsonObjectRequest(
-                Request.Method.GET,
-                "https://elamothe.jwuclasses.com/Hello",
-                null,
-                {},
-                {},
-            )
-            queue.add(testRequest)
-            //Handle signup logic here, JSON Request once API is set up
-            val signUpIntent = Intent(this, MainMenuActivity::class.java)
-            startActivity(signUpIntent)
+            val email = editEmail.text.toString()
+            val password = editPassword.text.toString()
+            //Make sure email and password are not empty
+            if(email.isEmpty() || password.isEmpty()){
+                Log.e("Signup", "Email or password cannot be empty")
+                //Exit onClickListner
+                return@setOnClickListener
+            }
+            val params = JSONObject()
+            params.put("email", email)
+            params.put("password", password)
+            val queue = Volley.newRequestQueue(this)
 
+            //Handle signup logic here, JSON Request once API is set up
+            val signup = JsonObjectRequest(
+                Request.Method.POST, "https://elamothe.jwuclasses.com/signup",
+                params,
+                { response ->
+                    Log.e("Signup data", response.toString())
+
+                    val success = response.getBoolean("success")
+
+                    if (success) {
+                        Log.i("Signup", "User registered")
+
+                        val signInIntent = Intent(this, MainMenuActivity::class.java)
+                        signInIntent.putExtra("is_admin", 0)
+                        startActivity(signInIntent)
+                    }
+                },
+                { error ->
+                    error.printStackTrace()
+                }
+            )
+
+            signup.setShouldCache(false)
+            queue.add(signup)
         }
 
     }
