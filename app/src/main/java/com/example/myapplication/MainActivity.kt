@@ -38,80 +38,63 @@ class MainActivity : AppCompatActivity() {
         this.btnSignIn = findViewById(R.id.btnSignIn)
         this.btnSignUp = findViewById(R.id.btnSignUp)
         //Attempt to sign in if btnSignIn is clicked
-        this.btnSignIn.setOnClickListener {
-            Log.i("ButtonClicked", "btnSignInClicked")
+        btnSignIn.setOnClickListener {
+            Log.e("Button clicked", "btnSignIn Clicked")
             val email = editEmail.text.toString()
             val password = editPassword.text.toString()
-            val params = JSONObject()
-            params.put("email", email)
-            params.put("password", password)
-            val queue = Volley.newRequestQueue(this)
-            //Handle sign in logic here, JSON Request once API is set up
-            val signin = JsonObjectRequest(
-                Request.Method.POST, "https://elamothe.jwuclasses.com/login ",
-                params,
-                { response ->
-                    Log.e("Signin data", response.toString())
-
-                    val success = response.getBoolean("success")
+            Log.e("Entered credentials", "Email: $email, Password: $password")
+            ApiService.login(
+                this,
+                email,
+                password,
+                { success, isAdmin ->
 
                     if (success) {
-                        Log.i("Signin", "User logged in")
 
-                        val signInIntent = Intent(this, MainMenuActivity::class.java)
-                        signInIntent.putExtra("is_admin", response.getInt("is_admin"))
-                        startActivity(signInIntent)
+                        Log.i("Login", "User logged in")
+
+                        val intent = Intent(this, MainMenuActivity::class.java)
+                        intent.putExtra("is_admin", isAdmin)
+                        startActivity(intent)
                     }
+
                 },
                 { error ->
-                    error.printStackTrace()
+                    Log.e("Login error", error)
                 }
             )
-            signin.setShouldCache(false)
-            queue.add(signin)
-
-
         }
         //Same action as sign in, except creates a new account with default admin status = 0
-        this.btnSignUp.setOnClickListener {
-            Log.i("ButtonClicked", "btnSignUpClicked")
+        btnSignUp.setOnClickListener {
+
             val email = editEmail.text.toString()
             val password = editPassword.text.toString()
-            //Make sure email and password are not empty
-            if(email.isEmpty() || password.isEmpty()){
+
+            if (email.isEmpty() || password.isEmpty()) {
                 Log.e("Signup", "Email or password cannot be empty")
-                //Exit onClickListner
                 return@setOnClickListener
             }
-            val params = JSONObject()
-            params.put("email", email)
-            params.put("password", password)
-            val queue = Volley.newRequestQueue(this)
 
-            //Handle signup logic here, JSON Request once API is set up
-            val signup = JsonObjectRequest(
-                Request.Method.POST, "https://elamothe.jwuclasses.com/signup",
-                params,
-                { response ->
-                    Log.e("Signup data", response.toString())
-
-                    val success = response.getBoolean("success")
+            ApiService.signup(
+                this,
+                email,
+                password,
+                { success ->
 
                     if (success) {
+
                         Log.i("Signup", "User registered")
 
-                        val signInIntent = Intent(this, MainMenuActivity::class.java)
-                        signInIntent.putExtra("is_admin", 0)
-                        startActivity(signInIntent)
+                        val intent = Intent(this, MainMenuActivity::class.java)
+                        intent.putExtra("is_admin", 0)
+                        startActivity(intent)
                     }
+
                 },
                 { error ->
-                    error.printStackTrace()
+                    Log.e("Signup error", error)
                 }
             )
-
-            signup.setShouldCache(false)
-            queue.add(signup)
         }
 
     }

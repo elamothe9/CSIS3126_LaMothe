@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".StartGameActivity">
+
+    <TextView
+        android:id="@+id/txtHomeTeam"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Home Team"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toTopOf="@+id/radioGroupHome"
+        app:layout_constraintEnd_toStartOf="@id/txtAwayTeam"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.5" />
+
+    <TextView
+        android:id="@+id/txtAwayTeam"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Away Team"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toTopOf="@+id/radioGroupAway"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@id/txtHomeTeam"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.5" />
+
+    <RadioGroup
+        android:id="@+id/radioGroupHome"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintTop_toBottomOf="@id/txtHomeTeam"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/radioGroupAway"
+        app:layout_constraintHorizontal_bias="0.5">
+
+        <RadioButton
+            android:id="@+id/phantomsHome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Phantoms"
+            android:tag="phantoms"/>
+
+        <RadioButton
+            android:id="@+id/crimson_devilsHome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Crimson Devils"
+            android:tag="crimson_devils"/>
+
+        <RadioButton
+            android:id="@+id/outlawsHome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Outlaws"
+            android:tag="outlaws"/>
+
+        <RadioButton
+            android:id="@+id/venomHome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Venom"
+            android:tag="venom"/>
+
+    </RadioGroup>
+
+    <RadioGroup
+        android:id="@+id/radioGroupAway"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintTop_toBottomOf="@id/txtAwayTeam"
+        app:layout_constraintStart_toEndOf="@id/radioGroupHome"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5">
+
+        <RadioButton
+            android:id="@+id/phantomsAway"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Phantoms"
+            android:tag="phantoms"/>
+
+        <RadioButton
+            android:id="@+id/crimson_devilsAway"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Crimson Devils"
+            android:tag="crimson_devils"/>
+
+        <RadioButton
+            android:id="@+id/outlawsAway"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Outlaws"
+            android:tag="outlaws"/>
+
+        <RadioButton
+            android:id="@+id/venomAway"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Venom"
+            android:tag="venom"/>
+
+    </RadioGroup>
+
+    <Button
+        android:id="@+id/btnStartGame"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="64dp"
+        android:text="Start game"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/radioGroupHome" />
+
+    <Button
+        android:id="@+id/btnBack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="76dp"
+        android:text="Back"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnStartGame" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,10 +1,46 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".GameActivity">
+    android:layout_height="match_parent">
+
+    <!-- FIELD -->
+    <com.example.myapplication.BaseballFieldView
+        android:id="@+id/baseballFieldView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/pitchPanel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- PITCH PANEL -->
+    <GridLayout
+        android:id="@+id/pitchPanel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:columnCount="3"
+        android:padding="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <Button android:text="Ball" android:id="@+id/btnBall"/>
+        <Button android:text="Strike" android:id="@+id/btnStrike"/>
+        <Button android:text="Foul" android:id="@+id/btnFoul"/>
+
+        <Button android:text="Out" android:id="@+id/btnOut"/>
+        <Button android:text="Single" android:id="@+id/btnSingle"/>
+        <Button android:text="Double" android:id="@+id/btnDouble"/>
+
+        <Button android:text="Triple" android:id="@+id/btnTriple"/>
+        <Button android:text="Homerun" android:id="@+id/btnHomerun"/>
+        <Button android:text="Double Play" android:id="@+id/btnDoublePlay"/>
+
+        <Button android:text="Triple Play" android:id="@+id/btnTriplePlay"/>
+        <Button android:text="Fielders Choice" android:id="@+id/btnFC"/>
+
+    </GridLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

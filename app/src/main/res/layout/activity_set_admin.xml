@@ -8,7 +8,7 @@
     tools:context=".SetAdminActivity">
 
     <EditText
-        android:id="@+id/editTextAdminEmail"
+        android:id="@+id/editEmail"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:ems="10"
@@ -26,8 +26,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Enter email to set as admin:"
-        app:layout_constraintEnd_toEndOf="@+id/editTextAdminEmail"
-        app:layout_constraintStart_toStartOf="@+id/editTextAdminEmail"
+        app:layout_constraintEnd_toEndOf="@+id/editEmail"
+        app:layout_constraintStart_toStartOf="@+id/editEmail"
         tools:layout_editor_absoluteY="183dp" />
 
     <Button
@@ -37,10 +37,10 @@
         android:layout_marginTop="48dp"
         android:text="Confirm"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="@+id/editTextAdminEmail"
+        app:layout_constraintEnd_toEndOf="@+id/editEmail"
         app:layout_constraintHorizontal_bias="0.504"
-        app:layout_constraintStart_toStartOf="@+id/editTextAdminEmail"
-        app:layout_constraintTop_toBottomOf="@+id/editTextAdminEmail"
+        app:layout_constraintStart_toStartOf="@+id/editEmail"
+        app:layout_constraintTop_toBottomOf="@+id/editEmail"
         app:layout_constraintVertical_bias="0.0" />
 
     <Button

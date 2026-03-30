@@ -33,7 +33,7 @@ class MainMenuActivity : AppCompatActivity(){
         this.btnLogout = findViewById(R.id.btnLogout)
         //On click listeners, sending user to different activities based on which one they press
         this.btnStartGame.setOnClickListener {
-            val startGameIntent = Intent(this, GameActivity::class.java)
+            val startGameIntent = Intent(this, StartGameActivity::class.java)
             startActivity(startGameIntent)
     }
         this.btnViewStats.setOnClickListener {
