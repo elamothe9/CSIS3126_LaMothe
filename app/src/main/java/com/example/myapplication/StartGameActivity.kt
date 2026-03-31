@@ -17,7 +17,11 @@ class StartGameActivity : AppCompatActivity() {
     private lateinit var btnBack: Button
     private lateinit var homeTeamGroup: RadioGroup
     private lateinit var awayTeamGroup: RadioGroup
-
+    private var homeLoaded = false
+    private var awayLoaded = false
+    private var currentGameId = -1
+    private lateinit var homeTeam: String
+    private lateinit var awayTeam: String
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -59,47 +63,69 @@ class StartGameActivity : AppCompatActivity() {
             Log.e("Home team", homeTeam)
             Log.e("Away team", awayTeam)
 
+            fun tryStartGame() {
+                if (homeLoaded && awayLoaded) {
 
-            ApiService.createGame(this, homeTeam, awayTeam, { gameId ->
+                    Log.i("StartGame", "Both teams loaded, starting game")
 
-                if (gameId != -1) {
-                    var homeLoaded = false
-                    var awayLoaded = false
-
-                    val tryStartGame = {
-                        if (homeLoaded && awayLoaded) {
-                            val startGameIntent = Intent(this, GameActivity::class.java).apply {
-                                putExtra("game_id", gameId)
-                                putExtra("home_team", homeTeam)
-                                putExtra("away_team", awayTeam)
-                            }
-                            startActivity(startGameIntent)
-                        }
+                    val intent = Intent(this, GameActivity::class.java).apply {
+                        putExtra("game_id", currentGameId)
+                        putExtra("home_team_id", homeTeam)
+                        putExtra("away_team_id", awayTeam)
                     }
 
-                    ApiService.getPlayersByTeam(this, homeTeam, "home",
-                        onSuccess = {
-                            homeLoaded = true
-                            tryStartGame()
-                        },
-                        onError = { error -> Log.e("PlayerFetch", error) }
-                    )
-
-                    ApiService.getPlayersByTeam(this, awayTeam, "away",
-                        onSuccess = {
-                            awayLoaded = true
-                            tryStartGame()
-                        },
-                        onError = { error -> Log.e("PlayerFetch", error) }
-                    )
-                } else {
-                    Toast.makeText(this, "Failed to start game", Toast.LENGTH_SHORT).show()
+                    startActivity(intent)
                 }
+            }
+            fun loadPlayersAndStart() {
 
-            }, { error ->
-                Log.e("StartGame Error", error)
-                Toast.makeText(this, "Failed to start game", Toast.LENGTH_SHORT).show()
-            })
+                homeLoaded = false
+                awayLoaded = false
+
+                ApiService.getPlayersByTeam(this, homeTeam, "home",
+                    onSuccess = {
+                        Log.i("Players", "Home team loaded")
+                        homeLoaded = true
+                        tryStartGame()
+                    },
+                    onError = { error ->
+                        Log.e("Players", error)
+                    }
+                )
+
+                ApiService.getPlayersByTeam(this, awayTeam, "away",
+                    onSuccess = {
+                        Log.i("Players", "Away team loaded")
+                        awayLoaded = true
+                        tryStartGame()
+                    },
+                    onError = { error ->
+                        Log.e("Players", error)
+                    }
+                )
+            }
+            ApiService.createGame(this, homeTeam, awayTeam,
+                { gameId ->
+
+                    if (gameId != -1) {
+                        Log.i("StartGame", "Game created with ID: $gameId")
+
+                        currentGameId = gameId
+                        this.homeTeam = homeTeam
+                        this.awayTeam = awayTeam
+
+                        loadPlayersAndStart()
+
+                    } else {
+                        Toast.makeText(this, "Failed to start game", Toast.LENGTH_SHORT).show()
+                    }
+
+                },
+                { error ->
+                    Log.e("StartGame Error", error)
+                    Toast.makeText(this, "Failed to start game", Toast.LENGTH_SHORT).show()
+                })
+
 
         }
     }

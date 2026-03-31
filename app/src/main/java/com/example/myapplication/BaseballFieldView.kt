@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import androidx.appcompat.app.AlertDialog
@@ -14,6 +15,10 @@ class BaseballFieldView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
+    init {
+        isClickable = true
+        isFocusable = true
+    }
     var homeTeamId: String = ""
     var awayTeamId: String = ""
 
@@ -21,7 +26,9 @@ class BaseballFieldView @JvmOverloads constructor(
         homeTeamId = home
         awayTeamId = away
     }
+
     private var isTopInning = true
+
     /* ---------- PAINTS ---------- */
 
     private val fieldPaint = Paint().apply {
@@ -45,18 +52,24 @@ class BaseballFieldView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
 
+    private val runnerPaint = Paint().apply {
+        color = Color.YELLOW
+        style = Paint.Style.FILL
+    }
+
     private val textPaint = Paint().apply {
         color = Color.WHITE
-        textSize = 40f
+        textSize = 36f
         textAlign = Paint.Align.CENTER
     }
 
     private val scoreboardPaint = Paint().apply {
         color = Color.WHITE
-        textSize = 45f
+        textSize = 40f
     }
 
-    private val circleRadius = 60f
+    private val pitcherRadius = 50f
+    private val hitterRadius = 35f   // ✅ smaller hitter
 
     /* ---------- GAME STATE ---------- */
 
@@ -67,6 +80,11 @@ class BaseballFieldView @JvmOverloads constructor(
     private var homeScore = 0
     private var awayScore = 0
 
+    // Base runners
+    private var firstBase: Int? = null
+    private var secondBase: Int? = null
+    private var thirdBase: Int? = null
+
     private var selectedPitcher: Player? = null
     private var selectedHitter: Player? = null
 
@@ -74,6 +92,9 @@ class BaseballFieldView @JvmOverloads constructor(
 
     private lateinit var homePos: Pair<Float, Float>
     private lateinit var pitcherPos: Pair<Float, Float>
+    private lateinit var firstPos: Pair<Float, Float>
+    private lateinit var secondPos: Pair<Float, Float>
+    private lateinit var thirdPos: Pair<Float, Float>
 
     /* ---------- DRAW ---------- */
 
@@ -86,17 +107,22 @@ class BaseballFieldView @JvmOverloads constructor(
         // Background
         canvas.drawRect(0f, 0f, width, height, fieldPaint)
 
-        // Scoreboard
-        val scoreboardText =
-            "Inning: $inning  Outs: $outs  Balls: $balls  Strikes: $strikes  Home: $homeScore  Away: $awayScore"
-        canvas.drawText(scoreboardText, 50f, 80f, scoreboardPaint)
+        /* ---------- SCOREBOARD (COMPACT) ---------- */
+
+        val inningText = if (isTopInning) "TOP $inning" else "BOT $inning"
+        val line1 = "$inningText   Outs:$outs   Count:$balls-$strikes"
+        val line2 = "HOME $homeScore   AWAY $awayScore"
+
+        canvas.drawText(line1, 50f, 60f, scoreboardPaint)
+        canvas.drawText(line2, 50f, 110f, scoreboardPaint)
+
+        /* ---------- FIELD ---------- */
 
         val diamondSize = width.coerceAtMost(height) * 0.5f
         val centerX = width / 2
         val centerY = height / 2 + 50f
         val half = diamondSize / 2
 
-        // Bases
         val home = Pair(centerX, centerY + half)
         val first = Pair(centerX + half, centerY)
         val second = Pair(centerX, centerY - half)
@@ -104,6 +130,10 @@ class BaseballFieldView @JvmOverloads constructor(
 
         homePos = home
         pitcherPos = Pair(centerX, centerY)
+
+        firstPos = first
+        secondPos = second
+        thirdPos = third
 
         // Lines
         canvas.drawLine(home.first, home.second, first.first, first.second, linePaint)
@@ -123,8 +153,23 @@ class BaseballFieldView @JvmOverloads constructor(
             )
         }
 
-        // Pitcher circle
-        canvas.drawCircle(pitcherPos.first, pitcherPos.second, circleRadius, circlePaint)
+        /* ---------- RUNNERS ---------- */
+
+        val runnerRadius = 20f
+
+        if (firstBase != null) {
+            canvas.drawCircle(firstPos.first, firstPos.second, runnerRadius, runnerPaint)
+        }
+        if (secondBase != null) {
+            canvas.drawCircle(secondPos.first, secondPos.second, runnerRadius, runnerPaint)
+        }
+        if (thirdBase != null) {
+            canvas.drawCircle(thirdPos.first, thirdPos.second, runnerRadius, runnerPaint)
+        }
+
+        /* ---------- PITCHER ---------- */
+
+        canvas.drawCircle(pitcherPos.first, pitcherPos.second, pitcherRadius, circlePaint)
         canvas.drawText(
             selectedPitcher?.last_name ?: "P",
             pitcherPos.first,
@@ -132,12 +177,13 @@ class BaseballFieldView @JvmOverloads constructor(
             textPaint
         )
 
-        // Hitter circle (home plate)
-        canvas.drawCircle(homePos.first, homePos.second, circleRadius, circlePaint)
+        /* ---------- HITTER ---------- */
+
+        canvas.drawCircle(homePos.first, homePos.second, hitterRadius, circlePaint)
         canvas.drawText(
             selectedHitter?.last_name ?: "H",
             homePos.first,
-            homePos.second + 15f,
+            homePos.second + 10f,
             textPaint
         )
     }
@@ -151,65 +197,74 @@ class BaseballFieldView @JvmOverloads constructor(
             val x = event.x
             val y = event.y
 
-            if (isInsideCircle(x, y, pitcherPos)) {
-                showPlayerDropdown(isPitcher = true)
+            Log.e("Touch", "Tapped at $x, $y")
+
+            if (::pitcherPos.isInitialized &&
+                isInsideCircle(x, y, pitcherPos, pitcherRadius * 1.5f)
+            ) {
+                Log.e("Touch", "Pitcher tapped")
+                showPlayerDropdown(true)
                 return true
             }
 
-            if (isInsideCircle(x, y, homePos)) {
-                showPlayerDropdown(isPitcher = false)
+            if (::homePos.isInitialized &&
+                isInsideCircle(x, y, homePos, hitterRadius * 2f)
+            ) {
+                Log.e("Touch", "Hitter tapped")
+                showPlayerDropdown(false)
                 return true
             }
         }
 
-        return super.onTouchEvent(event)
+        return true
     }
 
-    private fun isInsideCircle(x: Float, y: Float, center: Pair<Float, Float>): Boolean {
+    private fun isInsideCircle(x: Float, y: Float, center: Pair<Float, Float>, radius: Float): Boolean {
         val dx = x - center.first
         val dy = y - center.second
-        return dx * dx + dy * dy <= circleRadius * circleRadius
+        return dx * dx + dy * dy <= radius * radius
     }
 
     /* ---------- DROPDOWN ---------- */
 
     private fun showPlayerDropdown(isPitcher: Boolean) {
+        val activity = context as? android.app.Activity ?: return
 
-        // Get correct team players
         val players = if (isPitcher) {
             if (isTopInning)
-                Repository.getHomeTeamPlayers(homeTeamId)   // home pitches
+                Repository.getHomeTeamPlayers(homeTeamId)
             else
                 Repository.getAwayTeamPlayers(awayTeamId)
         } else {
             if (isTopInning)
-                Repository.getAwayTeamPlayers(awayTeamId)   // away hits
+                Repository.getAwayTeamPlayers(awayTeamId)
             else
                 Repository.getHomeTeamPlayers(homeTeamId)
         }
+
+        Log.e("Dropdown", "Players size: ${players.size}")
 
         if (players.isEmpty()) return
 
         val names = players.map { "${it.first_name} ${it.last_name}" }.toTypedArray()
 
-        AlertDialog.Builder(context)
-            .setTitle(if (isPitcher) "Select Pitcher" else "Select Hitter")
-            .setItems(names) { dialog, which ->
-                val selected = players[which]
+        activity.runOnUiThread {
+            AlertDialog.Builder(activity)
+                .setTitle(if (isPitcher) "Select Pitcher" else "Select Hitter")
+                .setItems(names) { dialog, which ->
+                    val selected = players[which]
 
-                if (isPitcher) {
-                    selectedPitcher = selected
-                } else {
-                    selectedHitter = selected
+                    if (isPitcher) selectedPitcher = selected
+                    else selectedHitter = selected
+
+                    invalidate()
+                    dialog.dismiss()
                 }
-
-                invalidate() // redraw
-                dialog.dismiss()
-            }
-            .show()
+                .show()
+        }
     }
 
-    /* ---------- PUBLIC GAME STATE METHODS ---------- */
+    /* ---------- PUBLIC METHODS ---------- */
 
     fun updateCount(newBalls: Int, newStrikes: Int, newOuts: Int) {
         balls = newBalls
@@ -224,19 +279,19 @@ class BaseballFieldView @JvmOverloads constructor(
         invalidate()
     }
 
-    fun nextInning() {
-        inning++
-        outs = 0
-        balls = 0
-        strikes = 0
+    fun updateInning(newInning: Int, isTop: Boolean) {
+        inning = newInning
+        isTopInning = isTop
         invalidate()
     }
-    fun getPitcherId(): Int {
-        return selectedPitcher?.player_id ?: -1
+
+    fun setBaseRunners(first: Int?, second: Int?, third: Int?) {
+        firstBase = first
+        secondBase = second
+        thirdBase = third
+        invalidate()
     }
 
-    fun getHitterId(): Int {
-        return selectedHitter?.player_id ?: -1
-    }
+    fun getPitcherId(): Int = selectedPitcher?.player_id ?: -1
+    fun getHitterId(): Int = selectedHitter?.player_id ?: -1
 }
-

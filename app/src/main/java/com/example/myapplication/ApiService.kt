@@ -169,8 +169,14 @@ object ApiService {
             Request.Method.POST,
             BASE_URL + "insertPlay",
             params,
-            { onSuccess() },
-            { error -> onError(error.toString()) }
+            {
+                onSuccess()
+                Log.e("insertPlay SUCCESS", "Play inserted successfully")
+            },
+            { error ->
+                Log.e("insertPlay ERROR", error.toString())
+                onError(error.toString())
+            }
         )
 
         request.setShouldCache(false)
