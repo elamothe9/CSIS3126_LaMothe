@@ -10,11 +10,21 @@
         android:id="@+id/baseballFieldView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/btnPitch"
+        app:layout_constraintBottom_toTopOf="@+id/btnEndGame"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+    <!-- END GAME BUTTON -->
+    <Button
+        android:id="@+id/btnEndGame"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="End Game"
+        android:layout_margin="8dp"
+        android:textSize="18sp"
+        app:layout_constraintBottom_toTopOf="@id/btnPitch"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
-
     <!-- PITCH BUTTON -->
     <Button
         android:id="@+id/btnPitch"

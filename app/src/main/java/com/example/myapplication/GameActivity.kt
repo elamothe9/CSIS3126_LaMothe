@@ -52,7 +52,18 @@ class GameActivity : AppCompatActivity() {
         val awayTeam = intent.getStringExtra("away_team_id") ?: ""
 
         field.setTeams(homeTeam, awayTeam)
+        field.onRunnerAction = { base, action ->
 
+            when (action) {
+                0 -> state.advanceRunner(base, 1) // +1
+                1 -> state.advanceRunner(base, 2) // +2
+                2 -> state.advanceRunner(base, 3) // +3
+                3 -> state.advanceRunner(base, -1) // back
+                4 -> state.removeRunner(base)
+            }
+
+            updateUI()
+        }
         setupButtons()
         updateUI()
     }
@@ -60,6 +71,15 @@ class GameActivity : AppCompatActivity() {
         /* ---------------- BUTTONS ---------------- */
 
         private fun setupButtons() {
+            findViewById<Button>(R.id.btnEndGame).setOnClickListener {
+                Toast.makeText(this, "Game Ended", Toast.LENGTH_SHORT).show()
+
+                // later:
+                // send final stats
+                // navigate to summary screen
+
+                finish()
+            }
 
             findViewById<Button>(R.id.btnBall).setOnClickListener {
                 if (state.addBall()) {
@@ -73,7 +93,9 @@ class GameActivity : AppCompatActivity() {
             findViewById<Button>(R.id.btnStrike).setOnClickListener {
                 if (state.addStrike()) {
                     recordPlay(strikeout = 1)
-                    state.addOut(1)
+                    if(state.addOut(1) ){
+                        field.clearSelections()
+                    }
                     pitchPanel.visibility = View.GONE
                 }
                 updateUI()
@@ -88,21 +110,27 @@ class GameActivity : AppCompatActivity() {
 
             findViewById<Button>(R.id.btnOut).setOnClickListener {
                 recordPlay(battedOut = 1)
-                state.addOut(1)
+                if(state.addOut(1)) {
+                    field.clearSelections()
+                }
                 updateUI()
                 pitchPanel.visibility = View.GONE
             }
 
             findViewById<Button>(R.id.btnDoublePlay).setOnClickListener {
                 recordPlay(doublePlay = 1)
-                state.addOut(2)
+                if(state.addOut(2)) {
+                    field.clearSelections()
+                }
                 updateUI()
                 pitchPanel.visibility = View.GONE
             }
 
             findViewById<Button>(R.id.btnTriplePlay).setOnClickListener {
                 recordPlay(triplePlay = 1)
-                state.addOut(3)
+                if(state.addOut(3)){
+                    field.clearSelections()
+                }
                 updateUI()
                 pitchPanel.visibility = View.GONE
             }
@@ -148,7 +176,9 @@ class GameActivity : AppCompatActivity() {
 
             findViewById<Button>(R.id.btnFC).setOnClickListener {
                 recordPlay(fieldersChoice = 1)
-                state.addOut(1)
+                if(state.addOut(1)){
+                    field.clearSelections()
+                }
                 updateUI()
                 pitchPanel.visibility = View.GONE
             }

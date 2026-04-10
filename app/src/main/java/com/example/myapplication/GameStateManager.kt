@@ -39,15 +39,54 @@ class GameStateManager {
 
     /* ---------- OUTS ---------- */
 
-    fun addOut(num: Int) {
+    fun addOut(num: Int): Boolean {
         outs += num
         resetCount()
 
         if (outs >= 3) {
             switchSides()
+            return true    // 🔥 signal inning change
+        }
+        return false
+    }
+    /* ---------- Advancing runners ----------- */
+    fun advanceRunner(fromBase: Int, delta: Int) {
+        val runner = when (fromBase) {
+            1 -> firstBase
+            2 -> secondBase
+            3 -> thirdBase
+            else -> null
+        } ?: return
+
+        // Remove runner
+        when (fromBase) {
+            1 -> firstBase = null
+            2 -> secondBase = null
+            3 -> thirdBase = null
+        }
+
+        val newBase = fromBase + delta
+
+        when {
+            newBase <= 0 -> return
+
+            newBase == 1 -> firstBase = runner
+            newBase == 2 -> secondBase = runner
+            newBase == 3 -> thirdBase = runner
+
+            newBase >= 4 -> {
+                addRuns(1) // ✅ correct scoring
+            }
         }
     }
 
+    fun removeRunner(base: Int) {
+        when (base) {
+            1 -> firstBase = null
+            2 -> secondBase = null
+            3 -> thirdBase = null
+        }
+    }
     /* ---------- HITS ---------- */
 
     fun hit(bases: Int, batterId: Int?): Int {
@@ -125,12 +164,14 @@ class GameStateManager {
         thirdBase = null
     }
 
-    private fun switchSides() {
+    fun switchSides(): Boolean {
         outs = 0
         resetCount()
         clearBases()
-
         isTop = !isTop
         if (isTop) inning++
+
+        return true   // 🔥 signal inning change
     }
+
 }
