@@ -1,5 +1,8 @@
 package com.example.myapplication
 
+import android.util.Log
+import org.json.JSONObject
+
 class GameStateManager {
 
     var balls = 0
@@ -11,28 +14,51 @@ class GameStateManager {
     var homeScore = 0
     var awayScore = 0
 
-    // Base runners (store player IDs)
     var firstBase: Int? = null
     var secondBase: Int? = null
     var thirdBase: Int? = null
+    private val scoredRunnersThisPlay = mutableListOf<Int>()
+    /* ---------- LOAD FROM DATABASE ---------- */
+
+    fun loadFromPlay(play: JSONObject) {
+        Log.e("Previous state", play.toString())
+
+        inning = play.optInt("inning", inning)
+        isTop = play.optString("half", "TOP") == "TOP"
+
+        homeScore = play.optInt("home_score", 0)
+        awayScore = play.optInt("away_score", 0)
+
+        balls = play.optInt("balls", 0)
+        strikes = play.optInt("strikes", 0)
+        outs = play.optInt("outs", 0)
+
+        firstBase = if (play.isNull("first_base_runner_id")) null else play.optInt("first_base_runner_id")
+        secondBase = if (play.isNull("second_base_runner_id")) null else play.optInt("second_base_runner_id")
+        thirdBase = if (play.isNull("third_base_runner_id")) null else play.optInt("third_base_runner_id")
+    }
 
     /* ---------- COUNT ---------- */
 
     fun addBall(): Boolean {
         balls++
+        Log.e("GameStateManager", "Adding ball. Current count: $balls-$strikes")
         return balls == 4
     }
 
     fun addStrike(): Boolean {
         strikes++
+        Log.e("GameStateManager", "Adding strike. Current count: $balls-$strikes")
         return strikes == 3
     }
 
     fun addFoul() {
         if (strikes < 2) strikes++
+        Log.e("GameStateManager", "Adding foul. Current count: $balls-$strikes")
     }
 
     fun resetCount() {
+        Log.e("GameStateManager", "Resetting count")
         balls = 0
         strikes = 0
     }
@@ -41,15 +67,18 @@ class GameStateManager {
 
     fun addOut(num: Int): Boolean {
         outs += num
+        Log.e("GameStateManager", "Adding $num out(s). Current outs: $outs")
         resetCount()
 
         if (outs >= 3) {
             switchSides()
-            return true    // 🔥 signal inning change
+            return true
         }
         return false
     }
-    /* ---------- Advancing runners ----------- */
+
+    /* ---------- RUNNERS ---------- */
+
     fun advanceRunner(fromBase: Int, delta: Int) {
         val runner = when (fromBase) {
             1 -> firstBase
@@ -58,24 +87,38 @@ class GameStateManager {
             else -> null
         } ?: return
 
-        // Remove runner
+        val newBase = fromBase + delta
+
+        // remove from current base
         when (fromBase) {
             1 -> firstBase = null
             2 -> secondBase = null
             3 -> thirdBase = null
         }
 
-        val newBase = fromBase + delta
-
         when {
             newBase <= 0 -> return
 
-            newBase == 1 -> firstBase = runner
-            newBase == 2 -> secondBase = runner
-            newBase == 3 -> thirdBase = runner
+            newBase in 1..3 -> {
+                val placed = when (newBase) {
+                    1 -> firstBase == null
+                    2 -> secondBase == null
+                    3 -> thirdBase == null
+                    else -> false
+                }
+
+                if (!placed) return
+
+                when (newBase) {
+                    1 -> firstBase = runner
+                    2 -> secondBase = runner
+                    3 -> thirdBase = runner
+                }
+            }
 
             newBase >= 4 -> {
-                addRuns(1) // ✅ correct scoring
+                scoreRunner(runner)
+                addRuns(1)
             }
         }
     }
@@ -87,56 +130,63 @@ class GameStateManager {
             3 -> thirdBase = null
         }
     }
+    /* ---------- PLAY SCORING MANAGEMENT ---------- */
+    fun beginPlay() {
+        scoredRunnersThisPlay.clear()
+    }
+    fun scoreRunner(runnerId: Int?) {
+        if (runnerId != null) {
+            Log.e("GameStateManager", "Scoring runner with ID: $runnerId")
+            scoredRunnersThisPlay.add(runnerId)
+        }
+    }
+    fun getScoredRunners(): List<Int> {
+        Log.e("GameStateManager", "Scored runners this play: $scoredRunnersThisPlay")
+        return scoredRunnersThisPlay
+    }
     /* ---------- HITS ---------- */
 
     fun hit(bases: Int, batterId: Int?): Int {
-        var runsScored = 0
+        var runs = 0
 
         when (bases) {
-            1 -> { // SINGLE
-                if (thirdBase != null) runsScored++
+            1 -> {
+                if (thirdBase != null) runs++
                 thirdBase = secondBase
                 secondBase = firstBase
                 firstBase = batterId
             }
-
-            2 -> { // DOUBLE
-                if (thirdBase != null) runsScored++
-                if (secondBase != null) runsScored++
+            2 -> {
+                if (thirdBase != null) runs++
+                if (secondBase != null) runs++
                 thirdBase = firstBase
                 secondBase = batterId
                 firstBase = null
             }
-
-            3 -> { // TRIPLE
-                if (thirdBase != null) runsScored++
-                if (secondBase != null) runsScored++
-                if (firstBase != null) runsScored++
-
+            3 -> {
+                if (thirdBase != null) runs++
+                if (secondBase != null) runs++
+                if (firstBase != null) runs++
                 thirdBase = batterId
                 secondBase = null
                 firstBase = null
             }
-
-            4 -> { // HOMERUN
-                if (thirdBase != null) runsScored++
-                if (secondBase != null) runsScored++
-                if (firstBase != null) runsScored++
-
-                runsScored++ // batter scores
-
+            4 -> {
+                if (thirdBase != null) runs++
+                if (secondBase != null) runs++
+                if (firstBase != null) runs++
+                runs++
                 clearBases()
             }
         }
 
-        addRuns(runsScored)
+        addRuns(runs)
         resetCount()
-        return runsScored
+        return runs
     }
 
-    /* ---------- WALK ---------- */
-
     fun walk(batterId: Int?): Int {
+        Log.e("GameStateManager", "Adding walk for batter $batterId")
         var runs = 0
 
         if (firstBase != null && secondBase != null && thirdBase != null) {
@@ -151,7 +201,27 @@ class GameStateManager {
         resetCount()
         return runs
     }
+    fun fieldersChoice(batterId: Int?, outBase: Int): Boolean {
+        val runner = when (outBase) {
+            1 -> firstBase
+            2 -> secondBase
+            3 -> thirdBase
+            else -> null
+        } ?: return false
 
+        removeRunner(outBase)
+        addOut(1)
+
+        // Move the batter to the base if it's empty
+        when (outBase) {
+            1 -> if (firstBase == null) firstBase = batterId else return false
+            2 -> if (secondBase == null) secondBase = batterId else return false
+            3 -> if (thirdBase == null) thirdBase = batterId else return false
+        }
+
+        resetCount()
+        return true
+    }
     /* ---------- HELPERS ---------- */
 
     private fun addRuns(runs: Int) {
@@ -170,8 +240,6 @@ class GameStateManager {
         clearBases()
         isTop = !isTop
         if (isTop) inning++
-
-        return true   // 🔥 signal inning change
+        return true
     }
-
 }

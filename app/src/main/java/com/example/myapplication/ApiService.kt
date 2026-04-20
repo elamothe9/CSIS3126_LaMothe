@@ -130,7 +130,7 @@ object ApiService {
     fun insertPlay(
         context: Context,
         play: Play,
-        onSuccess: () -> Unit,
+        onSuccess: (Int) -> Unit,
         onError: (String) -> Unit
     ) {
         Log.e("Function", "insertPlay function called")
@@ -164,13 +164,13 @@ object ApiService {
         params.put("batted_out", play.batted_out)
         params.put("double_play", play.double_play)
         params.put("triple_play", play.triple_play)
-
+        Log.e("insertPlay PARAMS", params.toString())
         val request = JsonObjectRequest(
             Request.Method.POST,
             BASE_URL + "insertPlay",
             params,
-            {
-                onSuccess()
+            { response ->
+                onSuccess(response.getInt("play_id"))
                 Log.e("insertPlay SUCCESS", "Play inserted successfully")
             },
             { error ->
@@ -183,7 +183,30 @@ object ApiService {
         Volley.newRequestQueue(context).add(request)
     }
 
+    /* ---------------- INSERT WHO SCORED ---------------- */
+    fun insertPlayRun(
+        context: Context,
+        playId: Int,
+        runnerId: Int
+    ) {
+        val params = JSONObject()
+        params.put("play_id", playId)
+        params.put("runner_id", runnerId)
 
+        val request = JsonObjectRequest(
+            Request.Method.POST,
+            BASE_URL + "insertPlayRun",
+            params,
+            {
+                Log.d("PlayRun", "Inserted runner $runnerId for play $playId")
+            },
+            { error ->
+                Log.e("PlayRun ERROR", error.toString())
+            }
+        )
+
+        Volley.newRequestQueue(context).add(request)
+    }
     /* ---------------- UNDO LAST PLAY ---------------- */
 
     fun undoLastPlay(
@@ -200,8 +223,14 @@ object ApiService {
             Request.Method.POST,
             BASE_URL + "undoLastPlay",
             params,
-            { onSuccess() },
-            { error -> onError(error.toString()) }
+            {response ->
+                Log.e("undoLastPlay SUCCESS", response.toString())
+                onSuccess()
+            },
+            { error ->
+                onError(error.toString())
+                Log.e("undoLastPlay ERROR", error.toString())
+            }
         )
 
         request.setShouldCache(false)
@@ -217,13 +246,40 @@ object ApiService {
         onSuccess: (JSONObject) -> Unit,
         onError: (String) -> Unit
     ) {
-
+        val params = JSONObject()
+        params.put("game_id", gameId)
         val request = JsonObjectRequest(
-            Request.Method.GET,
-            BASE_URL + "getLatestPlay?game_id=$gameId",
-            null,
-            { response -> onSuccess(response) },
-            { error -> onError(error.toString()) }
+            Request.Method.POST,
+            BASE_URL + "getLatestPlay",
+            params,
+            { response ->
+                Log.e("getLatestPlay SUCCESS", response.toString())
+                onSuccess(response) },
+            { error ->
+
+                if (error.networkResponse != null && error.networkResponse.data != null) {
+
+                    val raw = String(error.networkResponse.data)
+
+                    Log.e("RAW_RESPONSE", raw)
+
+                    try {
+                        val json = JSONObject(raw)
+
+                        val receivedGameId = json.getInt("received_game_id")
+
+                        Log.e("Received_Game_ID", receivedGameId.toString())
+
+                    } catch (e: Exception) {
+                        Log.e("JSON_PARSE_ERROR", e.toString())
+                    }
+
+                } else {
+                    Log.e("VolleyError", error.toString())
+                }
+
+                onError(error.toString())
+            }
         )
 
         request.setShouldCache(false)

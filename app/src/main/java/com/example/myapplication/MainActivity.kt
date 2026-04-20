@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
                         Log.i("Login", "User logged in")
 
                         val intent = Intent(this, MainMenuActivity::class.java)
-                        intent.putExtra("is_admin", isAdmin)
+                        Repository.setAdmin(isAdmin)
                         startActivity(intent)
                     }
 

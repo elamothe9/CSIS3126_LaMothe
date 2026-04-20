@@ -10,8 +10,10 @@ require __DIR__ . '/../vendor/autoload.php';
 $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
 
+ini_set('display_errors', 0); //Don't output errors in response, will return HTML when JSON is expected in frontend
+ini_set('log_errors', 1);
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+
 
 $connection = mysqli_connect("mysql.jwuclasses.com","elamothe","adsjks934232_3","elamothe") or die("Unable to connect to database");
 
@@ -213,39 +215,60 @@ use ($connection) {
 
     $params = (array)$request->getParsedBody();
 
-    // Required fields
-    $game_id = $params["game_id"] ?? 0;
-    $inning = $params["inning"] ?? 1;
-    $half = $params["half"] ?? "TOP";
+    // -----------------------
+    // CORE GAME STATE
+    // -----------------------
+    $game_id = (int)($params["game_id"] ?? 0);
+    $inning = (int)($params["inning"] ?? 1);
+    $half = mysqli_real_escape_string($connection, $params["half"] ?? "TOP");
 
-    $home_score = $params["home_score"] ?? 0;
-    $away_score = $params["away_score"] ?? 0;
+    $home_score = (int)($params["home_score"] ?? 0);
+    $away_score = (int)($params["away_score"] ?? 0);
 
-    $pitcher_id = $params["pitcher_id"] ?? 0;
-    $batter_id = $params["batter_id"] ?? 0;
+    $pitcher_id = (int)($params["pitcher_id"] ?? 0);
+    $batter_id = (int)($params["batter_id"] ?? 0);
 
-    // Nullable runners
-    $first_base_runner_id = isset($params["first_base_runner_id"]) ? $params["first_base_runner_id"] : "NULL";
-    $second_base_runner_id = isset($params["second_base_runner_id"]) ? $params["second_base_runner_id"] : "NULL";
-    $third_base_runner_id = isset($params["third_base_runner_id"]) ? $params["third_base_runner_id"] : "NULL";
+    // -----------------------
+    // BASE RUNNERS
+    // -----------------------
+    $first_base_runner_id = isset($params["first_base_runner_id"])
+        ? (int)$params["first_base_runner_id"]
+        : "NULL";
 
-    $balls = $params["balls"] ?? 0;
-    $strikes = $params["strikes"] ?? 0;
-    $outs = $params["outs"] ?? 0;
+    $second_base_runner_id = isset($params["second_base_runner_id"])
+        ? (int)$params["second_base_runner_id"]
+        : "NULL";
 
-    // Results
-    $single_hit = $params["single_hit"] ?? 0;
-    $double_hit = $params["double_hit"] ?? 0;
-    $triple_hit = $params["triple_hit"] ?? 0;
-    $homerun = $params["homerun"] ?? 0;
-    $strikeout = $params["strikeout"] ?? 0;
-    $walk = $params["walk"] ?? 0;
-    $fielders_choice = $params["fielders_choice"] ?? 0;
-    $batted_out = $params["batted_out"] ?? 0;
-    $double_play = $params["double_play"] ?? 0;
-    $triple_play = $params["triple_play"] ?? 0;
+    $third_base_runner_id = isset($params["third_base_runner_id"])
+        ? (int)$params["third_base_runner_id"]
+        : "NULL";
 
-    // Build query
+    // -----------------------
+    // PITCH COUNTS (IMPORTANT)
+    // -----------------------
+    $balls = (int)($params["ball"] ?? $params["balls"] ?? 0);
+    $strikes = (int)($params["strike"] ?? $params["strikes"] ?? 0);
+    $outs = (int)($params["outs"] ?? 0);
+
+    // -----------------------
+    // OUTCOMES
+    // -----------------------
+    $single_hit = (int)($params["single_hit"] ?? 0);
+    $double_hit = (int)($params["double_hit"] ?? 0);
+    $triple_hit = (int)($params["triple_hit"] ?? 0);
+    $homerun = (int)($params["homerun"] ?? 0);
+
+    $strikeout = (int)($params["strikeout"] ?? 0);
+    $walk = (int)($params["walk"] ?? 0);
+
+    $fielders_choice = (int)($params["fielders_choice"] ?? 0);
+    $batted_out = (int)($params["batted_out"] ?? 0);
+    $double_play = (int)($params["double_play"] ?? 0);
+    $triple_play = (int)($params["triple_play"] ?? 0);
+
+    // -----------------------
+    // QUERY
+    // -----------------------
     $sql = "
         INSERT INTO Play (
             game_id, inning, half,
@@ -272,7 +295,8 @@ use ($connection) {
 
     if ($res) {
         $payload = json_encode([
-            "success" => true
+            "success" => true,
+            "play_id" => mysqli_insert_id($connection)
         ]);
     } else {
         $payload = json_encode([
@@ -281,8 +305,156 @@ use ($connection) {
         ]);
     }
 
+    if (ob_get_length()) ob_clean();
+
     $response->getBody()->write($payload);
     return $response->withHeader('Content-Type', 'application/json');
 });
 
+$app->post('/addRun', function(Request $request, Response $response, array $args)
+    use ($connection) {
+        
+
+
+});    
+$app->post('/undoLastPlay', function(Request $request, Response $response, array $args)
+use($connection) {
+
+    try {
+        $params = (array)$request->getParsedBody();
+        $game_id = $params["game_id"] ?? 0;
+
+        $game_id = mysqli_real_escape_string($connection, $game_id);
+
+        $res = mysqli_query(
+            $connection,
+            "SELECT play_id FROM Play 
+             WHERE game_id = '$game_id' 
+             ORDER BY play_id DESC 
+             LIMIT 1"
+        );
+
+        if (!$res) {
+            throw new Exception(mysqli_error($connection));
+        }
+
+        if ($row = mysqli_fetch_assoc($res)) {
+            $play_id = $row["play_id"];
+
+            $delete = mysqli_query(
+                $connection,
+                "DELETE FROM Play WHERE play_id = '$play_id'"
+            );
+
+            if (!$delete) {
+                throw new Exception(mysqli_error($connection));
+            }
+
+            $payload = [
+                "success" => true,
+                "deleted_play_id" => (int)$play_id
+            ];
+
+        } else {
+            $payload = [
+                "success" => false,
+                "error" => "No plays to undo"
+            ];
+        }
+
+    } catch (Exception $e) {
+        $payload = [
+            "success" => false,
+            "error" => $e->getMessage()
+        ];
+    }
+
+    if (ob_get_length()) {
+        ob_clean();
+    }
+
+    $response->getBody()->write(json_encode($payload));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+
+$app->post('/getLatestPlay', function(Request $request, Response $response, array $args)
+use($connection) {
+
+    try {
+        $params = (array)$request->getParsedBody();
+        $game_id = $params["game_id"] ?? 0;
+
+    if ($game_id == 0) {
+        throw new Exception("Missing game_id");
+    }
+
+$game_id = mysqli_real_escape_string($connection, (string)$game_id);
+
+        $res = mysqli_query(
+            $connection,
+            "SELECT * FROM Play 
+             WHERE game_id = '$game_id'
+             ORDER BY play_id DESC
+             LIMIT 1"
+        );
+
+        if (!$res) {
+            throw new Exception(mysqli_error($connection));
+        }
+
+        if ($row = mysqli_fetch_assoc($res)) {
+            $payload = [
+                "received_game_id" => $game_id,
+                "success" => true,
+                "play" => $row
+            ];
+        } else {
+            $payload = [
+                "received_game_id" => $game_id,
+                "success" => false,
+                "error" => "No plays found"
+            ];
+        }
+
+    } catch (Exception $e) {
+        $payload = [
+            "received_game_id" => $game_id,
+            "success" => false,
+            "error" => $e->getMessage()
+        ];
+    }
+
+    if (ob_get_length()) {
+        ob_clean();
+    }
+
+    $response->getBody()->write(json_encode($payload));
+    return $response->withHeader('Content-Type', 'application/json');
+});
+$app->post('/insertPlayRun', function(Request $request, Response $response, array $args)
+use ($connection) {
+
+    $params = (array)$request->getParsedBody();
+
+    $play_id = $params["play_id"] ?? 0;
+    $runner_id = $params["runner_id"] ?? 0;
+
+    $play_id = mysqli_real_escape_string($connection, $play_id);
+    $runner_id = mysqli_real_escape_string($connection, $runner_id);
+
+    $sql = "
+        INSERT INTO Play_Run (play_id, runner_id)
+        VALUES ('$play_id', '$runner_id')
+    ";
+
+    $res = mysqli_query($connection, $sql);
+
+    $payload = json_encode([
+        "success" => $res ? true : false,
+        "error" => $res ? null : mysqli_error($connection)
+    ]);
+
+    $response->getBody()->write($payload);
+    return $response->withHeader('Content-Type', 'application/json');
+});
 $app->run();

@@ -223,64 +223,6 @@ class BaseballFieldView @JvmOverloads constructor(
             .show()
     }
 
-    private fun moveRunner(fromBase: Int, delta: Int) {
-        val runner = when (fromBase) {
-            1 -> firstBase
-            2 -> secondBase
-            3 -> thirdBase
-            else -> null
-        } ?: return
-
-        // Snapshot current state
-        var f = firstBase
-        var s = secondBase
-        var t = thirdBase
-
-        // Remove runner from original base
-        when (fromBase) {
-            1 -> f = null
-            2 -> s = null
-            3 -> t = null
-        }
-
-        val newBase = fromBase + delta
-
-        when {
-            newBase <= 0 -> {
-                // runner removed (back past home)
-            }
-
-            newBase == 1 -> {
-                if (f == null) f = runner else return
-            }
-
-            newBase == 2 -> {
-                if (s == null) s = runner else return
-            }
-
-            newBase == 3 -> {
-                if (t == null) t = runner else return
-            }
-
-            newBase >= 4 -> {
-                // runner scores
-                //if (isTopInning) awayScore++ else homeScore++
-            }
-        }
-
-        // ✅ Apply clean state
-        firstBase = f
-        secondBase = s
-        thirdBase = t
-    }
-
-    private fun removeRunner(base: Int) {
-        when (base) {
-            1 -> firstBase = null
-            2 -> secondBase = null
-            3 -> thirdBase = null
-        }
-    }
 
     /* ---------- PLAYER DROPDOWN ---------- */
 
@@ -331,6 +273,12 @@ class BaseballFieldView @JvmOverloads constructor(
     }
 
     fun updateInning(i: Int, top: Boolean) {
+        val inningChanged = (i != inning) || (top != isTopInning)
+
+        if (inningChanged) {
+            clearSelections()   // ✅ only when inning flips
+        }
+
         inning = i
         isTopInning = top
         invalidate()
@@ -348,6 +296,11 @@ class BaseballFieldView @JvmOverloads constructor(
 
     fun clearSelections() {
         selectedPitcher = null
+        selectedHitter = null
+        invalidate()
+    }
+
+    fun clearHitter() {
         selectedHitter = null
         invalidate()
     }

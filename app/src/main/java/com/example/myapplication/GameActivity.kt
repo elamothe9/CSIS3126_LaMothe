@@ -6,41 +6,85 @@ import android.view.View
 import android.widget.Button
 import android.widget.GridLayout
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 
 class GameActivity : AppCompatActivity() {
-        private lateinit var pitchPanel: GridLayout
-        private lateinit var btnPitch: Button
-        private lateinit var field: BaseballFieldView
-        private val state = GameStateManager()
+
+    private lateinit var pitchPanel: GridLayout
+    private lateinit var btnPitch: Button
+    private lateinit var btnUndo: Button
+    private lateinit var field: BaseballFieldView
+
+    private val state = GameStateManager()
+
+    private var gameId: Int = -1
+    private var homeTeam: String = ""
+    private var awayTeam: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_game)
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-
-        Log.e("GameActivity", "GameActivity started")
-
-        // ✅ FIXED (no val)
         pitchPanel = findViewById(R.id.pitchPanel)
         btnPitch = findViewById(R.id.btnPitch)
+        btnUndo = findViewById(R.id.btnUndo)
         field = findViewById(R.id.baseballFieldView)
+
+        gameId = intent.getIntExtra("game_id", -1)
+        Log.e("GameActivity", "Received gameId: $gameId")
+        homeTeam = intent.getStringExtra("home_team_id") ?: ""
+        awayTeam = intent.getStringExtra("away_team_id") ?: ""
+
+        field.setTeams(homeTeam, awayTeam)
+
+        // (Extra safety) Reload players in case Repository is empty
+        ApiService.getPlayersByTeam(this, homeTeam, "home",
+            onSuccess = {
+                Log.i("Players", "Home loaded in GameActivity")
+            },
+            onError = { Log.e("Players", it) }
+        )
+
+        ApiService.getPlayersByTeam(this, awayTeam, "away",
+            onSuccess = {
+                Log.i("Players", "Away loaded in GameActivity")
+            },
+            onError = { Log.e("Players", it) }
+        )
+        field.onRunnerAction = { base, action ->
+
+            var playRecorded = false
+
+            when (action) {
+                0 -> state.advanceRunner(base, 1)
+                1 -> state.advanceRunner(base, 2)
+                2 -> state.advanceRunner(base, 3)
+                3 -> state.advanceRunner(base, -1)
+
+                4 -> {
+                    state.removeRunner(base)
+                    state.addOut(1)
+
+                    recordPlay(battedOut = 1)
+                    playRecorded = true
+                }
+            }
+
+            if (!playRecorded) {
+                recordPlay()
+            }
+
+            updateUI()
+        }
+        btnUndo.setOnClickListener {
+            undoLastPlay(gameId)
+        }
 
         btnPitch.setOnClickListener {
             val pitcherId = field.getPitcherId()
             val hitterId = field.getHitterId()
 
             if (pitcherId == -1 || hitterId == -1) {
-                Log.e("Game", "Select pitcher and hitter first")
                 Toast.makeText(this, "Must choose hitter and pitcher", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
@@ -48,204 +92,287 @@ class GameActivity : AppCompatActivity() {
             pitchPanel.visibility = View.VISIBLE
         }
 
-        val homeTeam = intent.getStringExtra("home_team_id") ?: ""
-        val awayTeam = intent.getStringExtra("away_team_id") ?: ""
-
-        field.setTeams(homeTeam, awayTeam)
-        field.onRunnerAction = { base, action ->
-
-            when (action) {
-                0 -> state.advanceRunner(base, 1) // +1
-                1 -> state.advanceRunner(base, 2) // +2
-                2 -> state.advanceRunner(base, 3) // +3
-                3 -> state.advanceRunner(base, -1) // back
-                4 -> state.removeRunner(base)
-            }
-
-            updateUI()
-        }
         setupButtons()
         updateUI()
     }
 
-        /* ---------------- BUTTONS ---------------- */
+    /* ---------------- UNDO ---------------- */
 
-        private fun setupButtons() {
-            findViewById<Button>(R.id.btnEndGame).setOnClickListener {
-                Toast.makeText(this, "Game Ended", Toast.LENGTH_SHORT).show()
+    private fun undoLastPlay(gameId: Int) {
+        ApiService.undoLastPlay(
+            this,
+            gameId,
+            onSuccess = {
+                ApiService.getLatestPlay(
+                    this,
+                    gameId,
+                    onSuccess = { response ->
 
-                // later:
-                // send final stats
-                // navigate to summary screen
+                        if (!response.optBoolean("success")) {
+                            Log.e("Undo", "Backend failed: ${response.optString("error")}")
+                            Toast.makeText(this, "Undo failed", Toast.LENGTH_SHORT).show()
+                            return@getLatestPlay
+                        }
 
-                finish()
-            }
+                        val playObj = response.getJSONObject("play")
 
-            findViewById<Button>(R.id.btnBall).setOnClickListener {
-                if (state.addBall()) {
-                    recordPlay(walk = 1)
-                    state.walk(field.getHitterId())
-                    pitchPanel.visibility = View.GONE
-                }
-                updateUI()
-            }
+                        state.loadFromPlay(playObj)
 
-            findViewById<Button>(R.id.btnStrike).setOnClickListener {
-                if (state.addStrike()) {
-                    recordPlay(strikeout = 1)
-                    if(state.addOut(1) ){
-                        field.clearSelections()
+                        runOnUiThread {
+                            updateUI()
+                            Toast.makeText(this, "Undo successful", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onError = {
+                        error->
+                        Log.e("GameActivity", "Failed to fetch latest play after undo: $error")
+
+                        Toast.makeText(this, "Failed to fetch latest play", Toast.LENGTH_SHORT).show()
                     }
+                )
+            },
+            onError = {
+                Toast.makeText(this, "Undo failed", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    /* ---------------- BUTTONS ---------------- */
+
+    private fun setupButtons() {
+
+        findViewById<Button>(R.id.btnBall).setOnClickListener {
+
+            val isWalk = state.addBall()
+
+            if (isWalk) {
+                recordPlay(
+                    walk = 1
+                )
+                state.walk(field.getHitterId())
+                field.clearHitter()
+                pitchPanel.visibility = View.GONE
+            } else {
+                recordPlay()
+            }
+            Log.e("RecordPlay", "BALL: Walk = $isWalk")
+
+
+            updateUI()
+        }
+
+        findViewById<Button>(R.id.btnStrike).setOnClickListener {
+
+            val isStrikeout = state.addStrike()
+
+            if (isStrikeout) {
+                recordPlay(
+                    strikeout = 1
+                )
+                state.addOut(1)
+                field.clearHitter()
+                pitchPanel.visibility = View.GONE
+            } else{
+                recordPlay()
+            }
+            Log.e("RecordPlay", "STRIKE: Strikeout = $isStrikeout")
+
+
+            updateUI()
+        }
+
+        /* -------- FOUL -------- */
+        findViewById<Button>(R.id.btnFoul).setOnClickListener {
+            state.addFoul()
+            recordPlay()
+            updateUI()
+        }
+
+        /* -------- OUT (ball in play) -------- */
+        findViewById<Button>(R.id.btnOut).setOnClickListener {
+            state.addOut(1)
+            recordPlay(battedOut = 1)
+
+            field.clearHitter()
+            updateUI()
+            pitchPanel.visibility = View.GONE
+        }
+
+        findViewById<Button>(R.id.btnSingle).setOnClickListener {
+            state.hit(1, field.getHitterId())
+            recordPlay(single = 1)
+
+            field.clearHitter()
+            updateUI()
+            pitchPanel.visibility = View.GONE
+        }
+
+        findViewById<Button>(R.id.btnDouble).setOnClickListener {
+            state.hit(2, field.getHitterId())
+            recordPlay(doubleHit = 1)
+
+            field.clearHitter()
+            updateUI()
+            pitchPanel.visibility = View.GONE
+        }
+
+        findViewById<Button>(R.id.btnTriple).setOnClickListener {
+            state.hit(3, field.getHitterId())
+            recordPlay(triple = 1)
+
+            field.clearHitter()
+            updateUI()
+            pitchPanel.visibility = View.GONE
+        }
+
+        findViewById<Button>(R.id.btnHomerun).setOnClickListener {
+            state.hit(4, field.getHitterId())
+            recordPlay(homerun = 1)
+
+            field.clearHitter()
+            updateUI()
+            pitchPanel.visibility = View.GONE
+        }
+
+        /* -------- FIELDERS CHOICE -------- */
+        findViewById<Button>(R.id.btnFC).setOnClickListener {
+
+            val activity = this
+
+            val options = mutableListOf<String>()
+            val baseMap = mutableListOf<Int>()
+
+            if (state.firstBase != null) {
+                options.add("Runner out at 1st")
+                baseMap.add(1)
+            }
+
+            if (state.secondBase != null) {
+                options.add("Runner out at 2nd")
+                baseMap.add(2)
+            }
+
+            if (state.thirdBase != null) {
+                options.add("Runner out at 3rd")
+                baseMap.add(3)
+            }
+
+            if (options.isEmpty()) {
+                Toast.makeText(activity, "No runners for fielder's choice", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            androidx.appcompat.app.AlertDialog.Builder(activity)
+                .setTitle("Choose runner out")
+                .setItems(options.toTypedArray()) { _, which ->
+
+                    val outBase = baseMap[which]
+
+                    val success = state.fieldersChoice(field.getHitterId(), outBase)
+
+                    if (!success) {
+                        Toast.makeText(activity, "Invalid fielder's choice", Toast.LENGTH_SHORT).show()
+                        return@setItems
+                    }
+
+                    updateUI()  // ✅ update FIRST so UI reflects state
+
+                    recordPlay(fieldersChoice = 1)
+
+                    field.clearHitter()
                     pitchPanel.visibility = View.GONE
                 }
-                updateUI()
-            }
-
-            findViewById<Button>(R.id.btnFoul).setOnClickListener {
-                state.addFoul()
-                recordPlay()
-                updateUI()
-                pitchPanel.visibility = View.GONE
-            }
-
-            findViewById<Button>(R.id.btnOut).setOnClickListener {
-                recordPlay(battedOut = 1)
-                if(state.addOut(1)) {
-                    field.clearSelections()
-                }
-                updateUI()
-                pitchPanel.visibility = View.GONE
-            }
-
-            findViewById<Button>(R.id.btnDoublePlay).setOnClickListener {
-                recordPlay(doublePlay = 1)
-                if(state.addOut(2)) {
-                    field.clearSelections()
-                }
-                updateUI()
-                pitchPanel.visibility = View.GONE
-            }
-
-            findViewById<Button>(R.id.btnTriplePlay).setOnClickListener {
-                recordPlay(triplePlay = 1)
-                if(state.addOut(3)){
-                    field.clearSelections()
-                }
-                updateUI()
-                pitchPanel.visibility = View.GONE
-            }
-
-            findViewById<Button>(R.id.btnSingle).setOnClickListener {
-                recordPlay(single = 1)
-                state.hit(1, field.getHitterId())
-                updateUI()
-                pitchPanel.visibility = View.GONE
-            }
-
-            findViewById<Button>(R.id.btnDouble).setOnClickListener {
-                recordPlay(doubleHit = 1)
-                state.hit(2, field.getHitterId())
-                updateUI()
-                pitchPanel.visibility = View.GONE
-            }
-
-            findViewById<Button>(R.id.btnTriple).setOnClickListener {
-
-                val hitterId = field.getHitterId()
-                val pitcherId = field.getPitcherId()
-
-                if (hitterId == -1 || pitcherId == -1) {
-                    Log.e("Game", "Missing player selection")
-                    Toast.makeText(this, "Must select hitter and pitcher", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-
-                recordPlay(triple = 1)
-                state.hit(3, hitterId)
-
-                updateUI()
-                pitchPanel.visibility = View.GONE
-            }
-
-            findViewById<Button>(R.id.btnHomerun).setOnClickListener {
-                recordPlay(homerun = 1)
-                state.hit(4, field.getHitterId())
-                updateUI()
-                pitchPanel.visibility = View.GONE
-            }
-
-            findViewById<Button>(R.id.btnFC).setOnClickListener {
-                recordPlay(fieldersChoice = 1)
-                if(state.addOut(1)){
-                    field.clearSelections()
-                }
-                updateUI()
-                pitchPanel.visibility = View.GONE
-            }
+                .show()
         }
 
-        /* ---------------- UI ---------------- */
+        /* -------- DOUBLE PLAY -------- */
+        findViewById<Button>(R.id.btnDoublePlay).setOnClickListener {
+            state.addOut(2)
 
-        private fun updateUI() {
-            field.updateCount(state.balls, state.strikes, state.outs)
-            field.updateScore(state.homeScore, state.awayScore)
-            field.setBaseRunners(state.firstBase, state.secondBase, state.thirdBase)
-            field.updateInning(state.inning, state.isTop)
+            recordPlay(doublePlay = 1)
+
+            field.clearHitter()
+            updateUI()
+            pitchPanel.visibility = View.GONE
         }
 
-        /* ---------------- DATABASE ---------------- */
+        /* -------- TRIPLE PLAY -------- */
+        findViewById<Button>(R.id.btnTriplePlay).setOnClickListener {
+            state.addOut(3)
 
-        private fun recordPlay(
-            single: Int = 0,
-            doubleHit: Int = 0,
-            triple: Int = 0,
-            homerun: Int = 0,
-            strikeout: Int = 0,
-            walk: Int = 0,
-            fieldersChoice: Int = 0,
-            battedOut: Int = 0,
-            doublePlay: Int = 0,
-            triplePlay: Int = 0
-        ) {
+            recordPlay(triplePlay = 1)
 
-            val play = Play(
-                game_id = Repository.getGameId(),
-                inning = state.inning,
-                half = if (state.isTop) "TOP" else "BOTTOM",
-
-                home_score = state.homeScore,
-                away_score = state.awayScore,
-
-                pitcher_id = field.getPitcherId(),
-                batter_id = field.getHitterId(),
-
-                first_base_runner_id = state.firstBase,
-                second_base_runner_id = state.secondBase,
-                third_base_runner_id = state.thirdBase,
-
-                balls = state.balls,
-                strikes = state.strikes,
-                outs = state.outs,
-
-                single_hit = single,
-                double_hit = doubleHit,
-                triple_hit = triple,
-                homerun = homerun,
-                strikeout = strikeout,
-                walk = walk,
-                fielders_choice = fieldersChoice,
-                batted_out = battedOut,
-                double_play = doublePlay,
-                triple_play = triplePlay
-            )
-
-            Log.e("InsertPlay", play.toString())
-
-            ApiService.insertPlay(
-                this,
-                play,
-                onSuccess = { Log.i("InsertPlay", "SUCCESS") },
-                onError = { error -> Log.e("InsertPlay", error) }
-            )
+            field.clearHitter()
+            updateUI()
+            pitchPanel.visibility = View.GONE
         }
+    }
+
+    /* ---------------- UI ---------------- */
+
+    private fun updateUI() {
+        field.updateCount(state.balls, state.strikes, state.outs)
+        field.updateScore(state.homeScore, state.awayScore)
+        field.setBaseRunners(state.firstBase, state.secondBase, state.thirdBase)
+        field.updateInning(state.inning, state.isTop)
+    }
+
+    /* ---------------- DATABASE ---------------- */
+
+    private fun recordPlay(
+        single: Int = 0,
+        doubleHit: Int = 0,
+        triple: Int = 0,
+        homerun: Int = 0,
+        strikeout: Int = 0,
+        walk: Int = 0,
+        battedOut: Int = 0,
+        doublePlay: Int = 0,
+        triplePlay: Int = 0,
+        fieldersChoice: Int = 0
+    ) {
+        state.beginPlay()
+        val play = Play(
+            game_id = Repository.getGameId(),
+            inning = state.inning,
+            half = if (state.isTop) "TOP" else "BOTTOM",
+
+            home_score = state.homeScore,
+            away_score = state.awayScore,
+
+            pitcher_id = field.getPitcherId(),
+            batter_id = field.getHitterId(),
+
+            first_base_runner_id = state.firstBase,
+            second_base_runner_id = state.secondBase,
+            third_base_runner_id = state.thirdBase,
+
+            balls = state.balls,
+            strikes = state.strikes,
+            outs = state.outs,
+
+            single_hit = single,
+            double_hit = doubleHit,
+            triple_hit = triple,
+            homerun = homerun,
+            strikeout = strikeout,
+            walk = walk,
+            fielders_choice = fieldersChoice,
+            batted_out = battedOut,
+            double_play = doublePlay,
+            triple_play = triplePlay
+        )
+
+        ApiService.insertPlay(
+            this,
+            play,
+            onSuccess = { playId ->
+                state.getScoredRunners().forEach { runnerId ->
+                    ApiService.insertPlayRun(this, playId, runnerId)
+                }
+
+            },
+            onError = { }
+        )
+    }
 }
