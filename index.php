@@ -53,61 +53,86 @@ $app->get('/players', function (Request $request, Response $response, array $arg
         return $response;
     });
 
-$app->post('/login', function(Request $request, Response $response)
-    use ($connection) {
+$app->post('/signup', function(Request $request, Response $response) use ($connection) {
 
     $params = (array)$request->getParsedBody();
 
-    $email = $params['email'] ?? '';
-    $password = $params['password'] ?? '';
-
-    $res = mysqli_query(
-        $connection,
-        "SELECT * FROM Account WHERE email = '$email' AND password = '$password'"
-    );
-
-    $row = mysqli_fetch_assoc($res);
-
-    if ($row) {
-        $payload = json_encode([
-            "success" => true,
-            "email" => $email,
-            "is_admin" => (int)$row['is_admin']
-        ]);
-    } else {
-        $payload = json_encode([
-            "success" => false,
-            "email" => $email,
-            "is_admin" => 0
-        ]);
-    }
-
-    $response->getBody()->write($payload);
-
-    return $response->withHeader('Content-Type', 'application/json');
-});
-
-$app->post('/signup', function(Request $request, Response $response, array $args)
-    use ($connection) {
-
-    $params = (array)$request->getParsedBody();
-    $email = $params["email"] ?? '';
+    $email = trim($params["email"] ?? '');
     $password = $params["password"] ?? '';
 
-    $res = mysqli_query($connection, "INSERT INTO Account (email, password) VALUES ('$email', '$password')"
-    );
-
-    if ($res) {
-        $payload = json_encode(["success" => true]);
-    } else {
-        $payload = json_encode(["success" => false]);
+    if ($email === '' || $password === '') {
+        $response->getBody()->write(json_encode([
+            "success" => false,
+            "error" => "Missing email or password"
+        ]));
+        return $response->withHeader('Content-Type', 'application/json');
     }
 
-    $response->getBody()->write($payload);
+    // Hash password BEFORE storing
+    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+    $stmt = mysqli_prepare(
+        $connection,
+        "INSERT INTO Account (email, password) VALUES (?, ?)"
+    );
+
+    mysqli_stmt_bind_param($stmt, "ss", $email, $hashedPassword);
+
+    $res = mysqli_stmt_execute($stmt);
+
+    $response->getBody()->write(json_encode([
+        "success" => $res ? true : false,
+        "error" => $res ? null : mysqli_error($connection)
+    ]));
 
     return $response->withHeader('Content-Type', 'application/json');
 });
 
+$app->post('/login', function(Request $request, Response $response) use ($connection) {
+
+    $params = (array)$request->getParsedBody();
+    $email = trim($params['email'] ?? '');
+    $password = $params['password'] ?? '';
+
+    header('Content-Type: application/json');
+
+    $stmt = mysqli_prepare(
+        $connection,
+        "SELECT email, password, is_admin FROM Account WHERE email = ? LIMIT 1"
+    );
+
+    if (!$stmt) {
+        $response->getBody()->write(json_encode([
+            "success" => false,
+            "error" => "Prepare failed: " . mysqli_error($connection)
+        ]));
+        return $response;
+    }
+
+    mysqli_stmt_bind_param($stmt, "s", $email);
+    mysqli_stmt_execute($stmt);
+
+    mysqli_stmt_bind_result($stmt, $db_email, $db_password, $db_is_admin);
+
+    $found = mysqli_stmt_fetch($stmt);
+
+    if ($found && password_verify($password, $db_password)) {
+
+        $payload = [
+            "success" => true,
+            "email" => $db_email,
+            "is_admin" => (int)$db_is_admin
+        ];
+
+    } else {
+        $payload = [
+            "success" => false
+        ];
+    }
+
+    $response->getBody()->write(json_encode($payload));
+    return $response->withHeader('Content-Type', 'application/json');
+});
 
 $app->post('/createAdmin', function(Request $request, Response $response, array $args)
     use ($connection) {
