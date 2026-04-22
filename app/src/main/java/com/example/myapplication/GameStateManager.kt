@@ -96,30 +96,18 @@ class GameStateManager {
             3 -> thirdBase = null
         }
 
-        when {
-            newBase <= 0 -> return
+        if (newBase >= 4) {
+            scoreRunner(runner)
+            addRuns(1)
+            return
+        }
 
-            newBase in 1..3 -> {
-                val placed = when (newBase) {
-                    1 -> firstBase == null
-                    2 -> secondBase == null
-                    3 -> thirdBase == null
-                    else -> false
-                }
+        if (newBase <= 0) return
 
-                if (!placed) return
-
-                when (newBase) {
-                    1 -> firstBase = runner
-                    2 -> secondBase = runner
-                    3 -> thirdBase = runner
-                }
-            }
-
-            newBase >= 4 -> {
-                scoreRunner(runner)
-                addRuns(1)
-            }
+        when (newBase) {
+            1 -> firstBase = runner
+            2 -> secondBase = runner
+            3 -> thirdBase = runner
         }
     }
 
@@ -149,35 +137,40 @@ class GameStateManager {
     fun hit(bases: Int, batterId: Int?): Int {
         var runs = 0
 
+        if (thirdBase != null) {
+            scoreRunner(thirdBase)
+            runs++
+        }
+        if (bases >= 2 && secondBase != null) {
+            scoreRunner(secondBase)
+            runs++
+        }
+        if (bases >= 3 && firstBase != null) {
+            scoreRunner(firstBase)
+            runs++
+        }
+        if (bases == 4) {
+            scoreRunner(batterId)
+            runs++
+        }
+
         when (bases) {
             1 -> {
-                if (thirdBase != null) runs++
                 thirdBase = secondBase
                 secondBase = firstBase
                 firstBase = batterId
             }
             2 -> {
-                if (thirdBase != null) runs++
-                if (secondBase != null) runs++
                 thirdBase = firstBase
                 secondBase = batterId
                 firstBase = null
             }
             3 -> {
-                if (thirdBase != null) runs++
-                if (secondBase != null) runs++
-                if (firstBase != null) runs++
                 thirdBase = batterId
                 secondBase = null
                 firstBase = null
             }
-            4 -> {
-                if (thirdBase != null) runs++
-                if (secondBase != null) runs++
-                if (firstBase != null) runs++
-                runs++
-                clearBases()
-            }
+            4 -> clearBases()
         }
 
         addRuns(runs)
@@ -186,10 +179,11 @@ class GameStateManager {
     }
 
     fun walk(batterId: Int?): Int {
-        Log.e("GameStateManager", "Adding walk for batter $batterId")
+        Log.e("GameStateManager", "Processing walk for batter ID: $batterId")
         var runs = 0
 
         if (firstBase != null && secondBase != null && thirdBase != null) {
+            scoreRunner(thirdBase)
             runs++
         }
 

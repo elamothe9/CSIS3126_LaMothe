@@ -6,4 +6,16 @@
         <item name="android:layout_columnWeight">1</item>
         <item name="android:layout_margin">4dp</item>
     </style>
+    <style name="StatCell">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+    <style name="HeaderCell">
+        <item name="android:textColor">#FFD700</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:gravity">center</item>
+    </style>
 </resources>

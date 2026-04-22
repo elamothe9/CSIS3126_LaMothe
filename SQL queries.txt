@@ -99,6 +99,89 @@ INSERT INTO Player (team_id, first_name, last_name) VALUES ('Phantoms', 'Andrew'
 */
 
 
+CREATE VIEW pitching_stats AS
+SELECT
+    p.pitcher_id,
 
+    /* Outs → used for IP */
+    SUM(p.outs) AS total_outs,
+
+    /* Innings Pitched */
+    SUM(p.outs) / 3.0 AS IP,
+
+    /* Hits allowed */
+    SUM(p.single_hit + p.double_hit + p.triple_hit + p.homerun) AS Hits,
+
+    /* Runs allowed */
+    COUNT(pr.runner_id) AS Runs,
+
+    /* Strikeouts */
+    SUM(p.strikeout) AS K,
+
+    /* Walks */
+    SUM(p.walk) AS BB,
+
+    /* RA (Runs * 3 / IP) */
+    CASE
+        WHEN SUM(p.outs) = 0 THEN 0
+        ELSE (COUNT(pr.runner_id) * 3.0) / (SUM(p.outs) / 3.0)
+    END AS RA,
+
+    /* WHIP = (BB + Hits) / IP */
+    CASE
+        WHEN SUM(p.outs) = 0 THEN 0
+        ELSE
+            (SUM(p.walk) + SUM(p.single_hit + p.double_hit + p.triple_hit + p.homerun))
+            / (SUM(p.outs) / 3.0)
+    END AS WHIP
+
+FROM Play p
+
+LEFT JOIN Play_Run pr
+    ON pr.play_id = p.play_id
+
+GROUP BY p.pitcher_id;
+
+CREATE VIEW hitting_stats AS
+SELECT
+    p.batter_id,
+
+    /* Plate Appearances */
+    COUNT(*) AS PA,
+
+    /* At Bats (exclude walks) */
+    SUM(CASE WHEN p.walk = 0 THEN 1 ELSE 0 END) AS AB,
+
+    /* Hits */
+    SUM(p.single_hit + p.double_hit + p.triple_hit + p.homerun) AS Hits,
+
+    SUM(p.single_hit) AS Singles,
+    SUM(p.double_hit) AS Doubles,
+    SUM(p.triple_hit) AS Triples,
+    SUM(p.homerun) AS Homeruns,
+
+    /* Strikeouts */
+    SUM(p.strikeout) AS SO,
+
+    /* Walks */
+    SUM(p.walk) AS BB,
+
+    /* Runs (from Play_Run) */
+    COUNT(pr.runner_id) AS Runs,
+
+    /* Batting Average */
+    CASE
+        WHEN SUM(CASE WHEN p.walk = 0 THEN 1 ELSE 0 END) = 0 THEN 0
+        ELSE
+            SUM(p.single_hit + p.double_hit + p.triple_hit + p.homerun) /
+            SUM(CASE WHEN p.walk = 0 THEN 1 ELSE 0 END)
+    END AS AVG
+
+FROM Play p
+
+LEFT JOIN Play_Run pr
+    ON pr.runner_id = p.batter_id
+
+GROUP BY p.batter_id;
 
 

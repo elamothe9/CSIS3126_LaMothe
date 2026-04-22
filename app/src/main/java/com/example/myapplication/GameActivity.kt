@@ -13,6 +13,7 @@ class GameActivity : AppCompatActivity() {
     private lateinit var pitchPanel: GridLayout
     private lateinit var btnPitch: Button
     private lateinit var btnUndo: Button
+    private lateinit var btnEndGame: Button
     private lateinit var field: BaseballFieldView
 
     private val state = GameStateManager()
@@ -29,7 +30,7 @@ class GameActivity : AppCompatActivity() {
         btnPitch = findViewById(R.id.btnPitch)
         btnUndo = findViewById(R.id.btnUndo)
         field = findViewById(R.id.baseballFieldView)
-
+        btnEndGame = findViewById(R.id.btnEndGame)
         gameId = intent.getIntExtra("game_id", -1)
         Log.e("GameActivity", "Received gameId: $gameId")
         homeTeam = intent.getStringExtra("home_team_id") ?: ""
@@ -78,6 +79,28 @@ class GameActivity : AppCompatActivity() {
         }
         btnUndo.setOnClickListener {
             undoLastPlay(gameId)
+        }
+        btnEndGame.setOnClickListener {
+
+            ApiService.endGame(
+                this,
+                gameId,
+                state.homeScore,
+                state.awayScore,
+                onSuccess = { success ->
+                    if (success) {
+                        Log.e("EndGame", "Game ended successfully")
+                        finish()
+                    } else {
+                        Log.e("EndGame", "Failed to end game")
+                        Toast.makeText(this, "Failed to end game", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onError = { error ->
+                    Log.e("EndGame", "Error ending game: $error")
+                    Toast.makeText(this, "Failed to end game", Toast.LENGTH_SHORT).show()
+                }
+            )
         }
 
         btnPitch.setOnClickListener {
@@ -142,7 +165,7 @@ class GameActivity : AppCompatActivity() {
     private fun setupButtons() {
 
         findViewById<Button>(R.id.btnBall).setOnClickListener {
-
+            state.beginPlay()
             val isWalk = state.addBall()
 
             if (isWalk) {
@@ -162,7 +185,7 @@ class GameActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.btnStrike).setOnClickListener {
-
+            state.beginPlay()
             val isStrikeout = state.addStrike()
 
             if (isStrikeout) {
@@ -183,6 +206,7 @@ class GameActivity : AppCompatActivity() {
 
         /* -------- FOUL -------- */
         findViewById<Button>(R.id.btnFoul).setOnClickListener {
+            state.beginPlay()
             state.addFoul()
             recordPlay()
             updateUI()
@@ -190,6 +214,7 @@ class GameActivity : AppCompatActivity() {
 
         /* -------- OUT (ball in play) -------- */
         findViewById<Button>(R.id.btnOut).setOnClickListener {
+            state.beginPlay()
             state.addOut(1)
             recordPlay(battedOut = 1)
 
@@ -199,6 +224,7 @@ class GameActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.btnSingle).setOnClickListener {
+            state.beginPlay()
             state.hit(1, field.getHitterId())
             recordPlay(single = 1)
 
@@ -208,6 +234,7 @@ class GameActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.btnDouble).setOnClickListener {
+            state.beginPlay()
             state.hit(2, field.getHitterId())
             recordPlay(doubleHit = 1)
 
@@ -217,6 +244,7 @@ class GameActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.btnTriple).setOnClickListener {
+            state.beginPlay()
             state.hit(3, field.getHitterId())
             recordPlay(triple = 1)
 
@@ -226,6 +254,7 @@ class GameActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.btnHomerun).setOnClickListener {
+            state.beginPlay()
             state.hit(4, field.getHitterId())
             recordPlay(homerun = 1)
 
@@ -275,7 +304,7 @@ class GameActivity : AppCompatActivity() {
                         return@setItems
                     }
 
-                    updateUI()  // ✅ update FIRST so UI reflects state
+                    updateUI()
 
                     recordPlay(fieldersChoice = 1)
 
@@ -331,7 +360,6 @@ class GameActivity : AppCompatActivity() {
         triplePlay: Int = 0,
         fieldersChoice: Int = 0
     ) {
-        state.beginPlay()
         val play = Play(
             game_id = Repository.getGameId(),
             inning = state.inning,
@@ -368,6 +396,7 @@ class GameActivity : AppCompatActivity() {
             play,
             onSuccess = { playId ->
                 state.getScoredRunners().forEach { runnerId ->
+                    Log.e("Scored runner and play", "Runner: $runnerId, Play: $playId")
                     ApiService.insertPlayRun(this, playId, runnerId)
                 }
 

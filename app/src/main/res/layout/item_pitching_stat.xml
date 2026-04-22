@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="48dp"
+    android:orientation="horizontal"
+    android:background="#111111"
+    android:gravity="center_vertical"
+    android:paddingHorizontal="8dp">
+
+    <!-- Name -->
+    <TextView
+        android:id="@+id/tvName"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="2"
+        android:gravity="center_vertical"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/tvIP"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:textColor="#FFFFFF" />
+
+    <TextView
+        android:id="@+id/tvH"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:textColor="#FFFFFF" />
+
+    <TextView
+        android:id="@+id/tvR"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:textColor="#FFFFFF" />
+
+    <TextView
+        android:id="@+id/tvRA"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:textColor="#FFFFFF" />
+
+    <TextView
+        android:id="@+id/tvBB"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:textColor="#FFFFFF" />
+
+    <TextView
+        android:id="@+id/tvK"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:textColor="#FFFFFF" />
+
+    <TextView
+        android:id="@+id/tvWHIP"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:textColor="#FFFFFF" />
+
+</LinearLayout>

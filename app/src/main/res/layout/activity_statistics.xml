@@ -1,21 +1,100 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".StatisticsActivity">
+    android:layout_height="match_parent">
 
+    <!-- Scrollable content -->
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/btnBack"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- 🔥 Batting Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="#222222"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:text="PLAYER"
+                    style="@style/HeaderCell"/>
+
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="PA"/>
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="AB"/>
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="H"/>
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="AVG"/>
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="R"/>
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="BB"/>
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="SO"/>
+            </LinearLayout>
+
+            <!-- 🔥 Batting List -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvBatting"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"/>
+
+            <!-- 🔥 Pitching Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="#222222"
+                android:padding="8dp"
+                android:layout_marginTop="16dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:text="PITCHER"
+                    style="@style/HeaderCell"/>
+
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="IP"/>
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="H"/>
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="R"/>
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="RA"/>
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="BB"/>
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="K"/>
+                <TextView style="@style/HeaderCell" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="WHIP"/>
+            </LinearLayout>
+
+            <!-- 🔥 Pitching List -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvPitching"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Back Button -->
     <Button
         android:id="@+id/btnBack"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Back"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.91" />
+        app:layout_constraintEnd_toEndOf="parent"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

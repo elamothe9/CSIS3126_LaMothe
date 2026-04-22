@@ -318,18 +318,19 @@ $app->post('/addRun', function(Request $request, Response $response, array $args
 
 });    
 $app->post('/undoLastPlay', function(Request $request, Response $response, array $args)
-use($connection) {
+use ($connection) {
+
+    mysqli_begin_transaction($connection);
 
     try {
         $params = (array)$request->getParsedBody();
-        $game_id = $params["game_id"] ?? 0;
+        $game_id = (int)($params["game_id"] ?? 0);
 
-        $game_id = mysqli_real_escape_string($connection, $game_id);
-
+        // Get latest play
         $res = mysqli_query(
             $connection,
             "SELECT play_id FROM Play 
-             WHERE game_id = '$game_id' 
+             WHERE game_id = $game_id 
              ORDER BY play_id DESC 
              LIMIT 1"
         );
@@ -339,23 +340,39 @@ use($connection) {
         }
 
         if ($row = mysqli_fetch_assoc($res)) {
-            $play_id = $row["play_id"];
 
-            $delete = mysqli_query(
+            $play_id = (int)$row["play_id"];
+
+            // 1. Delete associated runs
+            $deleteRuns = mysqli_query(
                 $connection,
-                "DELETE FROM Play WHERE play_id = '$play_id'"
+                "DELETE FROM Play_Run WHERE play_id = $play_id"
             );
 
-            if (!$delete) {
+            if (!$deleteRuns) {
                 throw new Exception(mysqli_error($connection));
             }
 
+            // 2. Delete the play
+            $deletePlay = mysqli_query(
+                $connection,
+                "DELETE FROM Play WHERE play_id = $play_id"
+            );
+
+            if (!$deletePlay) {
+                throw new Exception(mysqli_error($connection));
+            }
+
+            mysqli_commit($connection);
+
             $payload = [
                 "success" => true,
-                "deleted_play_id" => (int)$play_id
+                "deleted_play_id" => $play_id
             ];
 
         } else {
+            mysqli_commit($connection);
+
             $payload = [
                 "success" => false,
                 "error" => "No plays to undo"
@@ -363,6 +380,9 @@ use($connection) {
         }
 
     } catch (Exception $e) {
+
+        mysqli_rollback($connection);
+
         $payload = [
             "success" => false,
             "error" => $e->getMessage()
@@ -374,9 +394,9 @@ use($connection) {
     }
 
     $response->getBody()->write(json_encode($payload));
+
     return $response->withHeader('Content-Type', 'application/json');
 });
-
 $app->post('/getLatestPlay', function(Request $request, Response $response, array $args)
 use($connection) {
 
@@ -436,22 +456,161 @@ use ($connection) {
 
     $params = (array)$request->getParsedBody();
 
-    $play_id = $params["play_id"] ?? 0;
-    $runner_id = $params["runner_id"] ?? 0;
-
-    $play_id = mysqli_real_escape_string($connection, $play_id);
-    $runner_id = mysqli_real_escape_string($connection, $runner_id);
+    $play_id = (int)$params["play_id"];
+    $runner_id = (int)$params["runner_id"];
 
     $sql = "
         INSERT INTO Play_Run (play_id, runner_id)
-        VALUES ('$play_id', '$runner_id')
+        VALUES ($play_id, $runner_id)
     ";
 
     $res = mysqli_query($connection, $sql);
 
     $payload = json_encode([
         "success" => $res ? true : false,
-        "error" => $res ? null : mysqli_error($connection)
+        "error" => $res ? null : mysqli_error($connection),
+        "play_id" => $play_id,
+        "runner_id" => $runner_id
+    ]);
+
+    $response->getBody()->write($payload);
+    return $response->withHeader('Content-Type', 'application/json');
+});
+$app->post('/endGame', function(Request $request, Response $response, array $args)
+use ($connection) {
+
+    $params = (array)$request->getParsedBody();
+
+    $game_id = (int)$params["game_id"];
+    $final_home_score = (int)$params["final_home_score"];
+    $final_away_score = (int)$params["final_away_score"];
+
+    $end_time = date("Y-m-d H:i:s");
+
+    $sql = "
+        UPDATE Game
+        SET 
+            final_home_score = $final_home_score,
+            final_away_score = $final_away_score,
+            end_time = '$end_time'
+        WHERE game_id = $game_id
+    ";
+
+    $res = mysqli_query($connection, $sql);
+
+    $payload = json_encode([
+        "success" => $res ? true : false,
+        "error" => $res ? null : mysqli_error($connection),
+        "game_id" => $game_id,
+        "end_time" => $end_time
+    ]);
+
+    $response->getBody()->write($payload);
+    return $response->withHeader('Content-Type', 'application/json');
+});
+$app->post('/getBattingStats', function(Request $request, Response $response) use ($connection) {
+
+    $sql = "
+            SELECT 
+        p.player_id,
+        CONCAT(p.first_name, ' ', p.last_name) AS name,
+
+        COUNT(pl.play_id) AS pa,
+
+        SUM(CASE WHEN IFNULL(pl.walk,0) = 0 THEN 1 ELSE 0 END) AS ab,
+
+        SUM(
+            IFNULL(pl.single_hit,0) +
+            IFNULL(pl.double_hit,0) +
+            IFNULL(pl.triple_hit,0) +
+            IFNULL(pl.homerun,0)
+        ) AS hits,
+
+        SUM(IFNULL(pl.single_hit,0)) AS singles,
+        SUM(IFNULL(pl.double_hit,0)) AS doubles,
+        SUM(IFNULL(pl.triple_hit,0)) AS triples,
+        SUM(IFNULL(pl.homerun,0)) AS homeruns,
+
+        SUM(IFNULL(pl.strikeout,0)) AS so,
+        SUM(IFNULL(pl.walk,0)) AS bb,
+
+        COUNT(pr.runner_id) AS runs
+
+    FROM Play pl
+    LEFT JOIN Player p ON pl.batter_id = p.player_id
+
+    LEFT JOIN Play_Run pr 
+        ON pl.play_id = pr.play_id 
+        AND pr.runner_id = p.player_id
+
+    WHERE pl.batter_id IS NOT NULL AND pl.batter_id != -1
+
+    GROUP BY pl.batter_id
+    ";
+
+    $res = mysqli_query($connection, $sql);
+
+    $players = [];
+    while ($row = mysqli_fetch_assoc($res)) {
+        $players[] = $row;
+    }
+
+    $response->getBody()->write(json_encode([
+        "success" => true,
+        "players" => $players
+    ]));
+
+    return $response->withHeader('Content-Type', 'application/json');
+});
+$app->post('/getPitchingStats', function(Request $request, Response $response) use ($connection) {
+
+    $sql = "
+        SELECT 
+            p.player_id,
+            CONCAT(p.first_name, ' ', p.last_name) AS name,
+
+            COALESCE(SUM(pl.outs) / 3.0, 0) AS ip,
+            COALESCE(SUM(pl.single_hit + pl.double_hit + pl.triple_hit + pl.homerun), 0) AS hits,
+            COALESCE(COUNT(pr.runner_id), 0) AS runs,
+            COALESCE(SUM(pl.strikeout), 0) AS k,
+            COALESCE(SUM(pl.walk), 0) AS bb,
+
+            CASE 
+                WHEN COALESCE(SUM(pl.outs), 0) = 0 THEN 0
+                ELSE (COUNT(pr.runner_id) * 3.0) / SUM(pl.outs)
+            END AS ra,
+
+            CASE 
+                WHEN COALESCE(SUM(pl.outs), 0) = 0 THEN 0
+                ELSE (SUM(pl.walk) + SUM(pl.single_hit + pl.double_hit + pl.triple_hit + pl.homerun)) / (SUM(pl.outs) / 3.0)
+            END AS whip
+
+        FROM Play pl
+        JOIN Player p ON pl.pitcher_id = p.player_id
+        LEFT JOIN Play_Run pr ON pl.play_id = pr.play_id
+
+        GROUP BY pl.pitcher_id
+    ";
+
+    $res = mysqli_query($connection, $sql);
+
+    if (!$res) {
+        $errorPayload = json_encode([
+            "success" => false,
+            "error" => mysqli_error($connection)
+        ]);
+        $response->getBody()->write($errorPayload);
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    $players = [];
+    while ($row = mysqli_fetch_assoc($res)) {
+        $players[] = $row;
+    }
+
+    $payload = json_encode([
+        "success" => true,
+        "players" => $players
     ]);
 
     $response->getBody()->write($payload);

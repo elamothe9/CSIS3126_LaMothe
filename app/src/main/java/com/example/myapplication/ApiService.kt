@@ -5,6 +5,7 @@ import android.util.Log
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
+import org.json.JSONArray
 import org.json.JSONObject
 
 object ApiService {
@@ -36,6 +37,10 @@ object ApiService {
 
             },
             { error ->
+                if (error.networkResponse != null) {
+                    val raw = String(error.networkResponse.data)
+                    Log.e("LOGIN_RAW_ERROR", raw)
+                }
                 Log.e("Login error", error.toString())
                 onError(error.toString())
             }
@@ -171,7 +176,7 @@ object ApiService {
             params,
             { response ->
                 onSuccess(response.getInt("play_id"))
-                Log.e("insertPlay SUCCESS", "Play inserted successfully")
+                Log.e("insertPlay SUCCESS", "Play inserted successfully with play_id  = ${response.getInt("play_id")}")
             },
             { error ->
                 Log.e("insertPlay ERROR", error.toString())
@@ -192,19 +197,19 @@ object ApiService {
         val params = JSONObject()
         params.put("play_id", playId)
         params.put("runner_id", runnerId)
-
+        Log.e("insertPlayRun PARAMS", params.toString())
         val request = JsonObjectRequest(
             Request.Method.POST,
             BASE_URL + "insertPlayRun",
             params,
-            {
-                Log.d("PlayRun", "Inserted runner $runnerId for play $playId")
+            { response->
+                Log.e("InsertPlayRun SUCCESS", response.toString())
             },
             { error ->
                 Log.e("PlayRun ERROR", error.toString())
             }
         )
-
+        request.setShouldCache(false)
         Volley.newRequestQueue(context).add(request)
     }
     /* ---------------- UNDO LAST PLAY ---------------- */
@@ -343,4 +348,102 @@ object ApiService {
         request.setShouldCache(false)
         Volley.newRequestQueue(context).add(request)
     }
+
+    /* ---------------- END GAME ---------------- */
+    fun endGame(
+        context: Context,
+        gameId: Int,
+        finalHomeScore: Int,
+        finalAwayScore: Int,
+        onSuccess: (Boolean) -> Unit,
+        onError: (String) -> Unit
+    ) {
+
+        val params = JSONObject()
+        params.put("game_id", gameId)
+        params.put("final_home_score", finalHomeScore)
+        params.put("final_away_score", finalAwayScore)
+
+        val request = JsonObjectRequest(
+            Request.Method.POST,
+            BASE_URL + "endGame",
+            params,
+            { response ->
+                val success = response.optBoolean("success", false)
+                onSuccess(success)
+            },
+            { error ->
+                onError(error.toString())
+            }
+        )
+
+        request.setShouldCache(false)
+        Volley.newRequestQueue(context).add(request)
+    }
+
+    fun getBattingStats(
+        context: Context,
+        onSuccess: (JSONArray) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val url = BASE_URL + "getBattingStats"
+
+        val request = JsonObjectRequest(
+            Request.Method.POST,
+            url,
+            null,
+            { response ->
+                Log.e("getBattingStats SUCCESS", response.toString())
+                try {
+                    val players = response.getJSONArray("players")
+                    onSuccess(players)
+                } catch (e: Exception) {
+                    onError(e.toString())
+                }
+            },
+            { error ->
+                onError(error.toString())
+            }
+        )
+
+        request.setShouldCache(false)
+        Volley.newRequestQueue(context).add(request)
+    }
+    fun getPitchingStats(
+        context: Context,
+        onSuccess: (JSONArray) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        Log.e("Function", "getPitchingStats function called")
+        val request = JsonObjectRequest(
+            Request.Method.POST,
+            BASE_URL + "getPitchingStats",
+            null,
+            { response ->
+                Log.e("getPitchingStats SUCCESS", response.toString())
+                try {
+                    val players = response.getJSONArray("players")
+                    onSuccess(players)
+                } catch (e: Exception) {
+                    Log.e("getPitchingStats ERROR", "Failed to parse pitching stats: ${e.toString()}")
+                    onError(e.toString())
+                }
+            },
+            { error ->
+                Log.e("getPitchingStats ERROR", "Volley error: ${error.message}")
+
+                error.networkResponse?.let {
+                    Log.e("getPitchingStats ERROR", "Status code: ${it.statusCode}")
+                    Log.e("getPitchingStats ERROR", "Response: ${String(it.data)}")
+                }
+
+                onError(error.toString())
+            }
+        )
+
+        request.setShouldCache(false)
+        Log.e("Volley", "Adding getPitchingStats request to queue")
+        Volley.newRequestQueue(context).add(request)
+    }
+
 }
