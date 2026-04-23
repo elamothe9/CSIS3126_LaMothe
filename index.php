@@ -180,18 +180,20 @@ use ($connection) {
 
     // Prepare JSON payload
     if ($res) {
-        // Get the last inserted ID (game_id)
-        $game_id = mysqli_insert_id($connection);
+
+    $game_id = mysqli_insert_id($connection);
+
+    $payload = [
+        "success" => true,
+        "game_id" => (int)$game_id
+    ];
+
+    } else {
 
         $payload = [
-            "success" => true,
-            "game_id" => (int)$game_id
-        ];
-    } else {
-        // Include error for debugging if needed
-        $payload = [
             "success" => false,
-            "error" => mysqli_error($connection)
+            "error" => mysqli_error($connection),
+            "game_id" => -1
         ];
     }
 
@@ -234,6 +236,7 @@ use($connection) {
     $response->getBody()->write($payload);
     return $response->withHeader('Content-Type', 'application/json');
 });
+
 
 $app->post('/insertPlay', function(Request $request, Response $response, array $args)
 use ($connection) {
@@ -336,12 +339,7 @@ use ($connection) {
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-$app->post('/addRun', function(Request $request, Response $response, array $args)
-    use ($connection) {
-        
-
-
-});    
+ 
 $app->post('/undoLastPlay', function(Request $request, Response $response, array $args)
 use ($connection) {
 

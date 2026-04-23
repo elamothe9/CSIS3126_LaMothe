@@ -155,6 +155,7 @@ class GameActivity : AppCompatActivity() {
                 )
             },
             onError = {
+                Log.e("GameActivity", "Undo failed: $it")
                 Toast.makeText(this, "Undo failed", Toast.LENGTH_SHORT).show()
             }
         )

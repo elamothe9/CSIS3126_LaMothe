@@ -105,12 +105,12 @@ object ApiService {
                 Log.e("createGame success", response.toString())
 
                 val success = response.getBoolean("success")
+
                 if (success) {
                     val gameId = response.getInt("game_id")
-                    Repository.setGameId(gameId)
                     onSuccess(gameId)
                 } else {
-                    onSuccess(-1)
+                    onError(response.optString("error"))
                 }
             },
             { error ->
@@ -177,6 +177,7 @@ object ApiService {
             { response ->
                 onSuccess(response.getInt("play_id"))
                 Log.e("insertPlay SUCCESS", "Play inserted successfully with play_id  = ${response.getInt("play_id")}")
+
             },
             { error ->
                 Log.e("insertPlay ERROR", error.toString())

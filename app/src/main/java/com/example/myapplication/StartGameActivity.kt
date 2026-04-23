@@ -106,11 +106,12 @@ class StartGameActivity : AppCompatActivity() {
             }
             ApiService.createGame(this, homeTeam, awayTeam,
                 { gameId ->
-
+                    Log.e("Start game teams", "homeTag=${homeButton.tag}, awayTag=${awayButton.tag}")
                     if (gameId != -1) {
                         Log.i("StartGame", "Game created with ID: $gameId")
 
                         currentGameId = gameId
+                        Repository.setGameId(gameId)
                         this.homeTeam = homeTeam
                         this.awayTeam = awayTeam
 
