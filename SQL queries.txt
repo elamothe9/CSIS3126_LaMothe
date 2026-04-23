@@ -8,7 +8,7 @@ CREATE TABLE Account (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    is_admin BOOLEAN NOT NULL DEFAULT FALSE
+    is_admin TINYINT(1) NOT NULL DEFAULT 0
 );
 CREATE TABLE Player (
     player_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -21,43 +21,65 @@ CREATE TABLE Game (
     game_id INT AUTO_INCREMENT PRIMARY KEY,
     home_team_id VARCHAR(25) NOT NULL,
     away_team_id VARCHAR(25) NOT NULL,
+
     final_home_score INT DEFAULT 0,
     final_away_score INT DEFAULT 0,
-    FOREIGN KEY (home_team_id) REFERENCES Team(team_id),
-    FOREIGN KEY (away_team_id) REFERENCES Team(team_id)
+
+    start_time DATETIME DEFAULT NULL,
+    end_time DATETIME DEFAULT NULL,
+
+    -- Foreign key constraints
+    CONSTRAINT fk_game_home_team
+        FOREIGN KEY (home_team_id)
+        REFERENCES Team(team_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+
+    CONSTRAINT fk_game_away_team
+        FOREIGN KEY (away_team_id)
+        REFERENCES Team(team_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
 );
 CREATE TABLE Play (
-    play_id INT AUTO_INCREMENT PRIMARY KEY,
+    play_id INT NOT NULL AUTO_INCREMENT,
     game_id INT NOT NULL,
-
-    -- Current situation(before play unfolds)
     inning INT NOT NULL,
-    half ENUM('TOP','BOTTOM') NOT NULL, -- clean inning data storage, instead of using a double
-
+    half ENUM('TOP','BOTTOM') NOT NULL,
     home_score INT NOT NULL DEFAULT 0,
     away_score INT NOT NULL DEFAULT 0,
-
     pitcher_id INT NOT NULL,
     batter_id INT NOT NULL,
-    first_base_runner_id INT,
-    second_base_runner_id INT,
-    third_base_runner_id INT,
+
+    first_base_runner_id INT DEFAULT NULL,
+    second_base_runner_id INT DEFAULT NULL,
+    third_base_runner_id INT DEFAULT NULL,
 
     balls INT NOT NULL DEFAULT 0,
     strikes INT NOT NULL DEFAULT 0,
     outs INT NOT NULL DEFAULT 0,
 
-	-- Result of play(does not record resulting situation)
-    single_hit BOOLEAN DEFAULT FALSE,
-    double_hit BOOLEAN DEFAULT FALSE, -- Has to be named double_hit instead of double because of variable attributes in sql :(  Other hits are named that way for consistency.
-    triple_hit BOOLEAN DEFAULT FALSE,
-    homerun BOOLEAN DEFAULT FALSE,
-    strikeout BOOLEAN DEFAULT FALSE,
-    walk BOOLEAN DEFAULT FALSE,
-    fielders_choice BOOLEAN DEFAULT FALSE,
-    batted_out BOOLEAN DEFAULT FALSE,
-    double_play BOOLEAN DEFAULT FALSE,
-    triple_play BOOLEAN DEFAULT FALSE,
+    single_hit TINYINT(1) DEFAULT 0,
+    double_hit TINYINT(1) DEFAULT 0,
+    triple_hit TINYINT(1) DEFAULT 0,
+    homerun TINYINT(1) DEFAULT 0,
+
+    strikeout TINYINT(1) DEFAULT 0,
+    walk TINYINT(1) DEFAULT 0,
+
+    fielders_choice TINYINT(1) DEFAULT 0,
+    batted_out TINYINT(1) DEFAULT 0,
+    double_play TINYINT(1) DEFAULT 0,
+    triple_play TINYINT(1) DEFAULT 0,
+
+    PRIMARY KEY (play_id),
+
+    KEY game_id (game_id),
+    KEY pitcher_id (pitcher_id),
+    KEY batter_id (batter_id),
+    KEY first_base_runner_id (first_base_runner_id),
+    KEY second_base_runner_id (second_base_runner_id),
+    KEY third_base_runner_id (third_base_runner_id),
 
     FOREIGN KEY (game_id) REFERENCES Game(game_id),
     FOREIGN KEY (pitcher_id) REFERENCES Player(player_id),
@@ -65,7 +87,6 @@ CREATE TABLE Play (
     FOREIGN KEY (first_base_runner_id) REFERENCES Player(player_id),
     FOREIGN KEY (second_base_runner_id) REFERENCES Player(player_id),
     FOREIGN KEY (third_base_runner_id) REFERENCES Player(player_id)
-
 );
 -- This tracks who scores on a given play, as it is easier than implementing it into the player table
 CREATE TABLE Play_Run (
@@ -184,4 +205,97 @@ LEFT JOIN Play_Run pr
 
 GROUP BY p.batter_id;
 
+CREATE VIEW hitting_stats AS
+SELECT
+    pl.batter_id AS batter_id,
 
+    COUNT(pl.play_id) AS PA,
+
+    SUM(CASE WHEN COALESCE(pl.walk, 0) = 0 THEN 1 ELSE 0 END) AS AB,
+
+    SUM(
+        COALESCE(pl.single_hit, 0) +
+        COALESCE(pl.double_hit, 0) +
+        COALESCE(pl.triple_hit, 0) +
+        COALESCE(pl.homerun, 0)
+    ) AS Hits,
+
+    SUM(COALESCE(pl.single_hit, 0)) AS Singles,
+    SUM(COALESCE(pl.double_hit, 0)) AS Doubles,
+    SUM(COALESCE(pl.triple_hit, 0)) AS Triples,
+    SUM(COALESCE(pl.homerun, 0)) AS Homeruns,
+
+    SUM(COALESCE(pl.strikeout, 0)) AS SO,
+    SUM(COALESCE(pl.walk, 0)) AS BB,
+
+    COUNT(pr.runner_id) AS Runs,
+
+    CASE
+        WHEN COUNT(pl.play_id) = 0 THEN 0
+        ELSE
+            SUM(
+                COALESCE(pl.single_hit, 0) +
+                COALESCE(pl.double_hit, 0) +
+                COALESCE(pl.triple_hit, 0) +
+                COALESCE(pl.homerun, 0)
+            ) / COUNT(pl.play_id)
+    END AS AVG
+
+FROM Play pl
+LEFT JOIN Play_Run pr
+    ON pl.play_id = pr.play_id
+    AND pr.runner_id = pl.batter_id
+
+WHERE pl.batter_id IS NOT NULL
+  AND pl.batter_id != -1
+
+GROUP BY pl.batter_id;
+
+CREATE VIEW pitching_stats AS
+SELECT
+    pl.pitcher_id AS pitcher_id,
+
+    SUM(pl.outs) AS total_outs,
+
+    SUM(pl.outs) / 3.0 AS IP,
+
+    SUM(
+        COALESCE(pl.single_hit, 0) +
+        COALESCE(pl.double_hit, 0) +
+        COALESCE(pl.triple_hit, 0) +
+        COALESCE(pl.homerun, 0)
+    ) AS Hits,
+
+    COUNT(pr.runner_id) AS Runs,
+
+    SUM(COALESCE(pl.strikeout, 0)) AS K,
+
+    SUM(COALESCE(pl.walk, 0)) AS BB,
+
+    CASE
+        WHEN SUM(pl.outs) = 0 THEN 0
+        ELSE (COUNT(pr.runner_id) * 3.0) / SUM(pl.outs)
+    END AS RA,
+
+    CASE
+        WHEN SUM(pl.outs) = 0 THEN 0
+        ELSE
+            (
+                SUM(COALESCE(pl.walk, 0)) +
+                SUM(
+                    COALESCE(pl.single_hit, 0) +
+                    COALESCE(pl.double_hit, 0) +
+                    COALESCE(pl.triple_hit, 0) +
+                    COALESCE(pl.homerun, 0)
+                )
+            ) / (SUM(pl.outs) / 3.0)
+    END AS WHIP
+
+FROM Play pl
+LEFT JOIN Play_Run pr
+    ON pl.play_id = pr.play_id
+
+WHERE pl.pitcher_id IS NOT NULL
+  AND pl.pitcher_id != -1
+
+GROUP BY pl.pitcher_id;
