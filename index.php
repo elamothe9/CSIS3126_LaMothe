@@ -538,9 +538,39 @@ $app->post('/getBattingStats', function(Request $request, Response $response) us
         p.player_id,
         CONCAT(p.first_name, ' ', p.last_name) AS name,
 
-        COUNT(pl.play_id) AS pa,
-
-        SUM(CASE WHEN IFNULL(pl.walk,0) = 0 THEN 1 ELSE 0 END) AS ab,
+        SUM(
+        CASE 
+            WHEN 
+                pl.single_hit = 1 OR
+                pl.double_hit = 1 OR
+                pl.triple_hit = 1 OR
+                pl.homerun = 1 OR
+                pl.walk = 1 OR
+                pl.strikeout = 1 OR
+                pl.batted_out = 1 OR
+                pl.fielders_choice = 1 OR
+                pl.double_play = 1 OR
+                pl.triple_play = 1
+            THEN 1
+            ELSE 0
+        END
+    ) AS pa,
+            SUM(
+        CASE 
+            WHEN 
+                (pl.single_hit = 1 OR
+                 pl.double_hit = 1 OR
+                 pl.triple_hit = 1 OR
+                 pl.homerun = 1 OR
+                 pl.strikeout = 1 OR
+                 pl.batted_out = 1 OR
+                 pl.fielders_choice = 1 OR
+                 pl.double_play = 1 OR
+                 pl.triple_play = 1)
+            THEN 1
+            ELSE 0
+        END
+    ) AS ab,
 
         SUM(
             IFNULL(pl.single_hit,0) +

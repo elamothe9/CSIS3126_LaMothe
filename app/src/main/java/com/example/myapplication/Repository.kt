@@ -46,16 +46,7 @@ object Repository {
         return awayTeamPlayers[teamId] ?: emptyList()
     }
 
-    data class GameState(
-        var inning: Int = 1,
-        var outs: Int = 0,
-        var balls: Int = 0,
-        var strikes: Int = 0,
-        var homeScore: Int = 0,
-        var awayScore: Int = 0,
-        var currentPitcherId: Int? = null
-    )
-
+    
 
 
 

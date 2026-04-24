@@ -64,7 +64,7 @@ class MainActivity : AppCompatActivity() {
                 }
             )
         }
-        //Same action as sign in, except creates a new account with default admin status = 0
+        //Same action as sign in, except creates a new account wiath default admin status = 0
         btnSignUp.setOnClickListener {
 
             val email = editEmail.text.toString()
